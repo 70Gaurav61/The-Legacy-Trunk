@@ -11,24 +11,24 @@ import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 
 
-export default function App(){
-return (
-<BrowserRouter>
-<div className="min-h-screen">
-<Header />
-<main className="container py-6">
-<Routes>
-<Route path="/" element={<Home />} />
-<Route path="/stories" element={<Stories />} />
-<Route path="/stories/:id" element={<StoryDetail />} />
-<Route path="/create" element={<Create />} />
-<Route path="/timeline" element={<TimelinePage />} />
-<Route path="/circles" element={<Circles />} />
-<Route path="/auth/login" element={<Login />} />
-<Route path="/auth/signup" element={<Signup />} />
-</Routes>
-</main>
-</div>
-</BrowserRouter>
-)
+export default function App() {
+  return (
+    <BrowserRouter>
+      <div className="min-h-screen">
+        <Header />
+        <main className="container py-6">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/stories" element={<Stories />} />
+            <Route path="/stories/:id" element={<StoryDetail />} />
+            <Route path="/create" element={<Create />} />
+            <Route path="/timeline" element={<TimelinePage />} />
+            <Route path="/circles" element={<Circles />} />
+            <Route path="/auth/login" element={<Login />} />
+            <Route path="/auth/signup" element={<Signup />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
+  )
 }
