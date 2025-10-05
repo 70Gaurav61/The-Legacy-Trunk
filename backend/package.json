@@ -1,4 +1,9 @@
 {
+  "name": "legacy-trunk-backend",
+  "version": "1.0.0",
+  "description": "The Legacy Trunk backend - MERN Stack",
+  "type": "module",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
