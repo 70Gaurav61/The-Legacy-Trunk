@@ -1,10 +1,10 @@
-# 🧳 The Legacy Trunk
+# The Legacy Trunk
 
 > A digital family archive preserving stories, heirlooms, and memories across generations.
 
 ---
 
-## 🌍 Project Overview
+## Project Overview
 
 For the **Great Zanetti family**, the circus has always been more than an art — it’s a living heritage passed down through sawdust and starlight for over a century.  
 However, as the elder members take their final bow, their treasured stories and traditions risk fading into silence.
@@ -15,7 +15,7 @@ By leveraging modern web technologies, AI-driven tools, and collaborative featur
 
 ---
 
-## 👥 Team Information
+## Team Information
 
 **Event:** WEBSTER 2025  
 **Team Name:** Team LegacyBuilder  
@@ -29,7 +29,7 @@ By leveraging modern web technologies, AI-driven tools, and collaborative featur
 
 ---
 
-## 🧭 Process Flow
+## Process Flow
 
 1. **User Authentication** – Secure, role-based login (grandparents, parents, kids).
 2. **Dashboard/Homepage** – Access the family trunk with quick links (Stories, Timeline, Photos, Circles).
@@ -42,9 +42,82 @@ By leveraging modern web technologies, AI-driven tools, and collaborative featur
 
 ---
 
-## 🌟 Features
+## Features
 
-### ✅ Basic Features
+### Basic Features
 
 - Family story recording (text/audio/video/photo).
-- Timeline creation (life/family
+- Timeline creation (life/family events).
+- Photo uploads with descriptions, dates, and tags.
+- Private family circles (secure sharing).
+- Search functionality with filters.
+- Role-based authentication & member management.
+- Export stories to **PDF** or **book** format.
+
+### Advanced Features
+
+- **Memory Prompts:** Predefined emotional or reflective questions.
+- **AI Text Analysis:** Auto-tagging, categorization, and sentiment extraction.
+- **Cross-Generational Matching:** Suggest connections based on shared interests.
+- **Collaborative Story Editing:** Multiple users can contribute to a single story.
+
+---
+
+## Suggested Tech Stack
+
+| Layer                | Technology                    |
+| :------------------- | :---------------------------- |
+| **Frontend**         | React / Next.js               |
+| **Backend**          | Node.js / Express             |
+| **Database**         | MongoDB / PostgreSQL          |
+| **Authentication**   | Firebase Auth / Auth0         |
+| **Media Storage**    | AWS S3 / Firebase Storage     |
+| **AI Text Analysis** | OpenAI API / Google Cloud NLP |
+| **PDF Generation**   | pdf-lib / Puppeteer           |
+| **Search Engine**    | ElasticSearch / Algolia       |
+
+---
+
+## Library / API Evaluation Guide
+
+When selecting external libraries and APIs, we evaluate them based on:
+
+1. **Active Development** – Regular commits and updates.
+2. **Community Support** – GitHub issue response, active discussions.
+3. **Popularity Metrics** – Stars, forks, contributors, and downloads.
+4. **Adoption & Reliability** – Used in production by real users.
+5. **Documentation Quality** – Clear setup and usage guides.
+6. **Maintenance & Backing** – Individual vs. company-supported.
+7. **License & Cost** – Open-source, trial, or premium.
+
+---
+
+## System Architecture (Conceptual)
+
+Frontend (React / Next.js)
+↓
+Backend (Node.js + Express)
+↓
+Database (MongoDB / PostgreSQL)
+↓
+Storage (AWS S3 / Firebase)
+↓
+AI & Utilities (OpenAI, PDF-lib, ElasticSearch)
+
+---
+
+## Future Enhancements
+
+- 🗣️ Voice-based story creation using speech-to-text.
+- 📷 Automatic photo captioning via vision AI.
+- 🧓 Family “legacy tree” visualization.
+- 💬 Integrated chat or comment threads for memories.
+- 🧾 Physical book printing integration.
+
+---
+
+## 💡 Project Vision
+
+To create **a timeless, digital home for family memories** — combining technology and emotion to make heritage everlasting.
+
+> _“Stories live forever when they’re told with love — and saved with care.”_
