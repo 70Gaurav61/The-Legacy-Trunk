@@ -9,7 +9,9 @@ import TimelinePage from './pages/TimelinePage'
 import Circles from './pages/Circles'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
-
+import FamilyOptions from './components/FamilyOptions'
+import CreateFamily from './components/CreateFamily'
+import FamilyTree from './components/FamilyTree'
 
 export default function App() {
   return (
@@ -24,6 +26,9 @@ export default function App() {
             <Route path="/create" element={<Create />} />
             <Route path="/timeline" element={<TimelinePage />} />
             <Route path="/circles" element={<Circles />} />
+            <Route path="/familyoptions" element={<FamilyOptions />} />
+            <Route path="/createfamily" element={<CreateFamily />} />
+            <Route path="/familytree" element={<FamilyTree />} />
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/signup" element={<Signup />} />
           </Routes>
