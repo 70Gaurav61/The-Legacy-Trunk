@@ -1,3 +1,6 @@
+import mongoose from "mongoose";
+
+
 const MemorySchema = new mongoose.Schema({
   family: { type: mongoose.Schema.Types.ObjectId, ref: "Family", required: true, index: true },
   author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -14,4 +17,11 @@ const MemorySchema = new mongoose.Schema({
   currentVersion: { type: Number, default: 1 },
   isArchived: { type: Boolean, default: false }
 }, { timestamps: true });
+
+// Ensure first version
+MemorySchema.pre("save", async function (next) {
+  if (this.isNew) this.currentVersion = 1;
+  next();
+});
+
 export default mongoose.model("Memory", MemorySchema);
