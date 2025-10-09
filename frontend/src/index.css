@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-gray-50 text-gray-800;
+}
+
+.container {
+  @apply max-w-5xl mx-auto px-4;
+}
+
+
+/* Small utilities */
+.card {
+  @apply bg-white rounded-lg shadow p-4;
+}
