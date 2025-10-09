@@ -63,15 +63,15 @@ By leveraging modern web technologies, AI-driven tools, and collaborative featur
 
 ---
 
-## Suggested Tech Stack
+## Tech Stack
 
 | Layer                | Technology                    |
 | :------------------- | :---------------------------- |
-| **Frontend**         | React / Next.js               |
+| **Frontend**         | React                         |
 | **Backend**          | Node.js / Express             |
-| **Database**         | MongoDB / PostgreSQL          |
-| **Authentication**   | Firebase Auth / Auth0         |
-| **Media Storage**    | AWS S3 / Firebase Storage     |
+| **Database**         | MongoDB                       |
+| **Authentication**   | JWT (with bcrypt hashing)     |
+| **Media Storage**    | AWS S3                        |
 | **AI Text Analysis** | OpenAI API / Google Cloud NLP |
 | **PDF Generation**   | pdf-lib / Puppeteer           |
 | **Search Engine**    | ElasticSearch / Algolia       |
