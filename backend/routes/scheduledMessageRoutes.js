@@ -1,5 +1,5 @@
 import express from "express";
-import { scheduleMessage, getScheduledMessages } from "../controllers/scheduleMessageController.js";
+import { scheduleMessage, getScheduledMessages } from "../controllers/scheduledMessageController.js";
 import { verifyAuth } from "../middlewares/auth/verifyAuth.js";
 import { isFamilyMember } from "../middlewares/access/isFamilyMember.js";
 

@@ -1,8 +1,12 @@
+import dotenv from "dotenv";
+dotenv.config(); // Load .env variables
+
+
 import multer from "multer";
 import multerS3 from "multer-s3";
 import s3 from "../../config/aws.js";
 
-const bucketName = process.env.AWS_BUCKET_NAME;
+const bucketName = process.env.S3_BUCKET_NAME;
 
 const fileFilter = (req, file, cb) => {
   const allowed = ["image/", "video/", "application/pdf"];
