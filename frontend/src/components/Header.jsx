@@ -1,21 +1,30 @@
-import React from 'react'
-import { Link, NavLink } from 'react-router-dom'
 
 
-export default function Header() {
-    return (
-        <header className="w-full bg-gradient-to-r from-rose-600 to-indigo-600 text-white py-4 shadow">
-            <div className="container flex items-center justify-between">
-                <Link to="/" className="text-xl font-semibold">Legacy Trunk</Link>
-                <nav className="flex items-center gap-4">
-                    <NavLink to="/" end className={({ isActive }) => isActive ? 'underline' : ''}>Home</NavLink>
-                    <NavLink to="/stories" className={({ isActive }) => isActive ? 'underline' : ''}>Stories</NavLink>
-                    <NavLink to="/timeline" className={({ isActive }) => isActive ? 'underline' : ''}>Timeline</NavLink>
-                    <NavLink to="/create" className={({ isActive }) => isActive ? 'underline' : ''}>Create</NavLink>
-                    <NavLink to="/circles" className={({ isActive }) => isActive ? 'underline' : ''}>Circles</NavLink>
-                    <NavLink to="/auth/login" className="ml-4">Login</NavLink>
-                </nav>
-            </div>
-        </header>
-    )
+import React from 'react';
+import SearchBox from './SearchBox';
+import ProfileAvatar from './ProfileAvatar';
+
+function Header() {
+  return (
+    <header className="sticky top-0 z-10 flex items-center justify-between p-4 bg-white shadow-md border-b border-gray-100">
+      <div className="text-2xl font-bold text-indigo-700 tracking-tight">
+        Legacy Trunk
+      </div>
+      
+      {/* Search Box in the center */}
+      <div className="hidden sm:block">
+        <SearchBox />
+      </div>
+
+      {/* Profile and Story on the right */}
+      <div className="flex items-center space-x-3">
+        <span className="text-sm font-medium text-gray-500 hidden md:block">
+          my private story
+        </span>
+        <ProfileAvatar />
+      </div>
+    </header>
+  );
 }
+
+export default Header;
