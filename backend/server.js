@@ -23,8 +23,7 @@ app.use(helmet());
 
 // Enable CORS
 app.use(cors({
-  origin: process.env.CLIENT_URL,
-  credentials: true,
+  origin: "*",
 }));
 
 // Body parsers

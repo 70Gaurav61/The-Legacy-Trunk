@@ -2,8 +2,10 @@ import Family from "../../models/Family.js";
 
 export const isFamilyMember = async (req, res, next) => {
   try {
+    console.log(req.user);
     const familyId = req.params.familyId || req.body.family;
     if (!familyId) return res.status(400).json({ message: "Family ID missing" });
+console.log("\nLaude lag gaye");
 
     const family = await Family.findById(familyId);
     if (!family) return res.status(404).json({ message: "Family not found" });

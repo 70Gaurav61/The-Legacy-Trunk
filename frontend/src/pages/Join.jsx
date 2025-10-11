@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-export default function CreateFamily() {
-  const [familyName, setFamilyName] = useState("");
+export default function JoinFamily() {
+  const [familyCode, setFamilyCode] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Step 2: Person details
   const [personData, setPersonData] = useState({
     name: "",
     dob: "",
@@ -15,32 +17,35 @@ export default function CreateFamily() {
     bio: "",
     avatarUrl: "",
   });
-  const [step, setStep] = useState(1); // step 1: create family, step 2: add person
+
+  const [step, setStep] = useState(1); // 1 = join family, 2 = add person
   const navigate = useNavigate();
 
   const handlePersonChange = (e) => {
     setPersonData({ ...personData, [e.target.name]: e.target.value });
   };
 
-  const createFamily = async (e) => {
+  // Step 1: Join Family
+  const joinFamily = async (e) => {
     e.preventDefault();
     setError("");
     try {
       setLoading(true);
       const res = await axios.post(
-        "http://localhost:5000/api/v1/family",
-        { name: familyName, password },
+        "http://localhost:5000/api/v1/family/join",
+        { familyCode, password },
         { withCredentials: true }
       );
-      console.log("Family created:", res.data);
-      setStep(2); // move to adding first person
+      console.log("Joined family:", res.data);
+      setStep(2); // Move to add Person
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create family");
+      setError(err.response?.data?.message || "Failed to join family");
     } finally {
       setLoading(false);
     }
   };
 
+  // Step 2: Add Person
   const addPerson = async (e) => {
     e.preventDefault();
     setError("");
@@ -48,10 +53,10 @@ export default function CreateFamily() {
       setLoading(true);
       await axios.post(
         "http://localhost:5000/api/v1/person",
-        { ...personData, family: "" }, // family will be inferred in backend from user?
+        { ...personData, family: "" }, // backend will associate with current family
         { withCredentials: true }
       );
-      navigate("/dashboard"); // done
+      navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add person");
     } finally {
@@ -64,21 +69,21 @@ export default function CreateFamily() {
       {step === 1 && (
         <>
           <h2 className="text-2xl font-bold mb-4 text-center text-indigo-600">
-            Create Family
+            Join a Family
           </h2>
-          <form onSubmit={createFamily} className="space-y-4">
+          <form onSubmit={joinFamily} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium">Family Name</label>
+              <label className="block text-sm font-medium">Family Code</label>
               <input
                 type="text"
-                value={familyName}
-                onChange={(e) => setFamilyName(e.target.value)}
+                value={familyCode}
+                onChange={(e) => setFamilyCode(e.target.value)}
                 required
                 className="mt-1 block w-full border rounded p-2"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium">Password (optional)</label>
+              <label className="block text-sm font-medium">Password</label>
               <input
                 type="password"
                 value={password}
@@ -86,13 +91,15 @@ export default function CreateFamily() {
                 className="mt-1 block w-full border rounded p-2"
               />
             </div>
+
             {error && <p className="text-red-500 text-sm">{error}</p>}
+
             <button
               type="submit"
               disabled={loading}
               className="w-full px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition"
             >
-              {loading ? "Creating..." : "Create Family"}
+              {loading ? "Joining..." : "Join Family"}
             </button>
           </form>
         </>
@@ -164,7 +171,7 @@ export default function CreateFamily() {
                 value={personData.bio}
                 onChange={handlePersonChange}
                 className="mt-1 block w-full border rounded p-2"
-              ></textarea>
+              />
             </div>
             <div>
               <label className="block text-sm font-medium">Avatar URL</label>
@@ -178,6 +185,7 @@ export default function CreateFamily() {
             </div>
 
             {error && <p className="text-red-500 text-sm">{error}</p>}
+
             <button
               type="submit"
               disabled={loading}
