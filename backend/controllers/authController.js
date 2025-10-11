@@ -10,11 +10,12 @@ export const register = async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     // Send token as httpOnly cookie
+
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // only true in production (HTTPS)
-      sameSite: "None", // allow frontend (React) from another domain
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
     res.status(201).json({ user, message: "Registration successful" });
@@ -39,7 +40,7 @@ export const login = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "None", // Important for cross-origin
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -54,7 +55,7 @@ export const logout = (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "None",
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
   });
   res.json({ message: "Logged out successfully" });
 };
