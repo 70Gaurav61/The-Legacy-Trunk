@@ -20,7 +20,7 @@ export const upload = multer({
   storage: multerS3({
     s3,
     bucket: bucketName,
-    acl: "public-read", // files will be publicly readable
+    //acl: "public-read", // files will be publicly readable
     metadata: (req, file, cb) => {
       cb(null, { fieldName: file.fieldname });
     },
