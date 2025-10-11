@@ -25,12 +25,13 @@ export default function Signup() {
     setSuccess("");
 
     if (form.password !== form.confirmPassword) {
-      return setError("Passwords do not match!");
+      setError("Passwords do not match!");
+      return;
     }
 
     try {
       setLoading(true);
-      const res = await axios.post("http://localhost:5000/api/v1/auth/register", {
+      await axios.post("http://localhost:5000/api/v1/auth/register", {
         name: form.name,
         email: form.email,
         password: form.password,
@@ -38,14 +39,14 @@ export default function Signup() {
 
       setSuccess("Signup successful! You can now log in.");
       navigate("/auth/login");
-    //   setForm({ name: "", email: "", password: "", confirmPassword: "" });
-
     } catch (err) {
       setError(err.response?.data?.message || "Signup failed");
     } finally {
       setLoading(false);
     }
   };
+
+  const passwordMismatch = form.password && form.confirmPassword && form.password !== form.confirmPassword;
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg shadow-md bg-white">
@@ -62,7 +63,7 @@ export default function Signup() {
             value={form.name}
             onChange={handleChange}
             required
-            className="mt-1 block w-full border rounded p-2"
+            className="mt-1 block w-full border rounded p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
@@ -74,7 +75,7 @@ export default function Signup() {
             value={form.email}
             onChange={handleChange}
             required
-            className="mt-1 block w-full border rounded p-2"
+            className="mt-1 block w-full border rounded p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
@@ -86,7 +87,9 @@ export default function Signup() {
             value={form.password}
             onChange={handleChange}
             required
-            className="mt-1 block w-full border rounded p-2"
+            className={`mt-1 block w-full border rounded p-2 focus:outline-none ${
+              passwordMismatch ? "border-red-500" : "focus:ring-2 focus:ring-indigo-500"
+            }`}
           />
         </div>
 
@@ -98,8 +101,13 @@ export default function Signup() {
             value={form.confirmPassword}
             onChange={handleChange}
             required
-            className="mt-1 block w-full border rounded p-2"
+            className={`mt-1 block w-full border rounded p-2 focus:outline-none ${
+              passwordMismatch ? "border-red-500" : "focus:ring-2 focus:ring-indigo-500"
+            }`}
           />
+          {passwordMismatch && (
+            <p className="text-red-500 text-sm mt-1">Passwords do not match</p>
+          )}
         </div>
 
         {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -108,7 +116,7 @@ export default function Signup() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition"
+          className="w-full px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition disabled:opacity-70"
         >
           {loading ? "Signing up..." : "Sign Up"}
         </button>
@@ -116,7 +124,7 @@ export default function Signup() {
 
       <p className="mt-4 text-sm text-center">
         Already have an account?{" "}
-        <a href="/login" className="text-indigo-600 font-medium">
+        <a href="/auth/login" className="text-indigo-600 font-medium">
           Login
         </a>
       </p>

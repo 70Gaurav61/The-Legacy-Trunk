@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import helmet from "helmet";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import { connectDB } from "./config/db.js";
 import routes from "./routes/index.js"; // Main router
@@ -21,9 +22,12 @@ connectDB();
 // Security headers
 app.use(helmet());
 
+
+app.use(cookieParser());
 // Enable CORS
 app.use(cors({
-  origin: "*",
+  origin: "http://localhost:5173",
+  credentials: true,
 }));
 
 // Body parsers

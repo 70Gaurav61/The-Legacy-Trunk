@@ -19,16 +19,17 @@ export default function Login() {
       const res = await axios.post(
         "http://localhost:5000/api/v1/auth/login",
         { email, password },
-        // { withCredentials: true } // ✅ for cookies
+        { withCredentials: true } // for cookies
       );
 
       const userData = res.data;
+    //   console.log(res);
 
-      // ✅ Conditional navigation
-      if (!userData.family) {
-        navigate("/choose");
-      } else {
+      // Conditional navigation
+      if (userData.user.families && userData.user.families.length > 0) {
         navigate("/dashboard");
+      } else {
+        navigate("/choose");
       }
     } catch (err) {
       setError(err.response?.data?.message || "Invalid email or password");

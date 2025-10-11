@@ -20,7 +20,7 @@ export default function App() {
         <Header />
         <main className="container py-6">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Login />} />
             <Route path="/stories" element={<Stories />} />
             <Route path="/stories/:id" element={<StoryDetail />} />
             <Route path="/create" element={<Create />} />

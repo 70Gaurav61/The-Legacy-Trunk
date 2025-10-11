@@ -3,11 +3,29 @@ import Memory from "../models/Memory.js";
 // Create Memory
 export const createMemory = async (req, res) => {
   try {
-    const memory = await Memory.create({
+    const memoryData = {
       ...req.body,
       author: req.user._id,
       family: req.family._id,
-    });
+      date: req.body.date || new Date(),
+    };
+    console.log(req);
+    console.log("HII");
+
+    console.log(req.file);
+
+    // Handle single file upload
+    if (req.file) {
+      memoryData.media = [
+        {
+          url: req.file.location, // ✅ use req.file.location
+          mimeType: req.file.mimetype,
+          size: req.file.size,
+        },
+      ];
+    }
+
+    const memory = await Memory.create(memoryData);
     res.status(201).json(memory);
   } catch (err) {
     res.status(400).json({ message: err.message });

@@ -2,7 +2,10 @@ import Family from "../../models/Family.js";
 
 export const isFamilyMember = async (req, res, next) => {
   try {
-    console.log(req.user);
+    //console.log(req.params.familyId );
+    //console.log(req.body.family);
+    
+    
     const familyId = req.params.familyId || req.body.family;
     if (!familyId) return res.status(400).json({ message: "Family ID missing" });
 console.log("\nLaude lag gaye");

@@ -9,8 +9,8 @@ import { upload } from "../middlewares/files/uploadMiddleware.js";
 const router = express.Router();
 
 // Memory CRUD
-router.post("/", verifyAuth, isFamilyMember, upload.array("media", 5), createMemory);
-router.get("/", verifyAuth, isFamilyMember, getMemories);
+router.post("/:familyId", verifyAuth, isFamilyMember, upload.array("media", 5), createMemory);
+router.get("/:familyId", verifyAuth, isFamilyMember, getMemories);
 router.put("/:memoryId", verifyAuth, isCollaborator, updateMemory);
 router.delete("/:memoryId", verifyAuth, isCollaborator, deleteMemory);
 
