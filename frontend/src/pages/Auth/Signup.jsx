@@ -1,126 +1,133 @@
-import React, { useState } from 'react';
-import { FaEye, FaEyeSlash } from 'react-icons/fa'; // For the password toggle
-import { useAuth } from '../../services/useAuth';
+import React, { useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
-/**
- * A sleek, modern Signup Form Component using Tailwind CSS.
- * Includes fields for Name, Email, and Password.
- */
-const Signup = () => {
-    const { register } = useAuth();
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+export default function Signup() {
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
 
-    const handleSignup = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-        try {
-            await register(name, email, password);
-            // Redirect to home or dashboard
-            window.location.href = '/';
-        } catch (err) {
-            setError(err.response?.data?.message || 'Signup failed');
-        } finally {
-            setLoading(false);
-        }
-    };
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const navigate = useNavigate();
 
-    const togglePasswordVisibility = () => {
-        setShowPassword(!showPassword);
-    };
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
-    return (
-        // --- Main Container: Centers the signup card ---
-        <div className="flex items-center justify-center min-h-screen p-4">
-            
-            {/* --- Signup Card --- */}
-            <div className="bg-white p-8 md:p-10 rounded-xl shadow-2xl w-full max-w-md transform transition duration-500 hover:scale-[1.01]">
-                
-                <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">
-                    Create Your Account 🎉
-                </h2>
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
 
-                <form onSubmit={handleSignup} className="space-y-5">
-                    
-                    {/* Full Name Input */}
-                    <div>
-                        <input
-                            type="text"
-                            placeholder="Full Name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-150"
-                        />
-                    </div>
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match!");
+      return;
+    }
 
-                    {/* Email Input */}
-                    <div>
-                        <input
-                            type="email"
-                            placeholder="Email Address"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-150"
-                        />
-                    </div>
+    try {
+      setLoading(true);
+      await axios.post("http://localhost:5000/api/v1/auth/register", {
+        name: form.name,
+        email: form.email,
+        password: form.password,
+      });
 
+      setSuccess("Signup successful! You can now log in.");
+      navigate("/auth/login");
+    } catch (err) {
+      setError(err.response?.data?.message || "Signup failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const passwordMismatch = form.password && form.confirmPassword && form.password !== form.confirmPassword;
 
-                    {/* Password Input with Toggle (Eye Button) */}
-                    <div className="relative">
-                        <input
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-150"
-                        />
-                        <span 
-                            onClick={togglePasswordVisibility}
-                            // Styling for Eye Toggle
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 cursor-pointer hover:text-gray-600 transition duration-150"
-                        >
-                            {showPassword ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
-                        </span>
-                    </div>
+  return (
+    <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg shadow-md bg-white">
+      <h2 className="text-2xl font-bold mb-4 text-center text-indigo-600">
+        Create Account
+      </h2>
 
-                    {/* Sign Up Button (Using a green accent color for registration/creation) */}
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        // Tailwind Classes for Button: Full width, padding, primary color, hover effect, shadow
-                        className="w-full py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {loading ? 'Signing Up...' : 'Sign Up'}
-                    </button>
-                </form>
-
-                {error && (
-                    <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-                        {error}
-                    </div>
-                )}
-
-                <div className="mt-6 text-center text-sm">
-                    {/* Already have an account? Link to Login */}
-                    <p className="text-gray-600">
-                        Already have an account? 
-                        <a href="/login" className="text-green-600 hover:text-green-800 font-medium ml-1 transition duration-150">
-                            Log In
-                        </a>
-                    </p>
-                </div>
-            </div>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium">Full Name</label>
+          <input
+            type="text"
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            required
+            className="mt-1 block w-full border rounded p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
         </div>
-    );
-};
 
-export default Signup;
+        <div>
+          <label className="block text-sm font-medium">Email</label>
+          <input
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            required
+            className="mt-1 block w-full border rounded p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium">Password</label>
+          <input
+            type="password"
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            required
+            className={`mt-1 block w-full border rounded p-2 focus:outline-none ${
+              passwordMismatch ? "border-red-500" : "focus:ring-2 focus:ring-indigo-500"
+            }`}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium">Confirm Password</label>
+          <input
+            type="password"
+            name="confirmPassword"
+            value={form.confirmPassword}
+            onChange={handleChange}
+            required
+            className={`mt-1 block w-full border rounded p-2 focus:outline-none ${
+              passwordMismatch ? "border-red-500" : "focus:ring-2 focus:ring-indigo-500"
+            }`}
+          />
+          {passwordMismatch && (
+            <p className="text-red-500 text-sm mt-1">Passwords do not match</p>
+          )}
+        </div>
+
+        {error && <p className="text-red-500 text-sm">{error}</p>}
+        {success && <p className="text-green-500 text-sm">{success}</p>}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition disabled:opacity-70"
+        >
+          {loading ? "Signing up..." : "Sign Up"}
+        </button>
+      </form>
+
+      <p className="mt-4 text-sm text-center">
+        Already have an account?{" "}
+        <a href="/auth/login" className="text-indigo-600 font-medium">
+          Login
+        </a>
+      </p>
+    </div>
+  );
+}
