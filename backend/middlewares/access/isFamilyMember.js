@@ -4,11 +4,15 @@ export const isFamilyMember = async (req, res, next) => {
   try {
     //console.log(req.params.familyId );
     //console.log(req.body.family);
+    // console.log("🧩 Incoming familyId from client:", {
+    //   params: req.params,
+    //   query: req.query,
+    //   body: req.body,
+    //   user: req.user
+    // });
     
-    
-    const familyId = req.params.familyId || req.body.family;
+    const familyId = req.params?.familyId || req.body?.family || req.query?.familyId || req.user?.families[0];
     if (!familyId) return res.status(400).json({ message: "Family ID missing" });
-console.log("\nLaude lag gaye");
 
     const family = await Family.findById(familyId);
     if (!family) return res.status(404).json({ message: "Family not found" });

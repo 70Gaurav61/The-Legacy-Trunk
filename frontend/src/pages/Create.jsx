@@ -2,19 +2,22 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-export default function CreateFamily() {
+export default function CreateFamily({ user }) {
   const [familyName, setFamilyName] = useState("");
   const [password, setPassword] = useState("");
+  const [familyId, setFamilyId] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
   const [personData, setPersonData] = useState({
-    name: "",
+    name: user?.name || "",
     dob: "",
     gender: "male",
     relationType: "other",
     bio: "",
-    avatarUrl: "",
+    avatarUrl: user?.avatarUrl || "",
   });
+
   const [step, setStep] = useState(1); // step 1: create family, step 2: add person
   const navigate = useNavigate();
 
@@ -22,17 +25,20 @@ export default function CreateFamily() {
     setPersonData({ ...personData, [e.target.name]: e.target.value });
   };
 
+  // Step 1: Create Family
   const createFamily = async (e) => {
     e.preventDefault();
     setError("");
     try {
       setLoading(true);
       const res = await axios.post(
-        "http://localhost:5000/api/v1/family",
+        "http://localhost:5000/api/v1/families",
         { name: familyName, password },
         { withCredentials: true }
       );
+
       console.log("Family created:", res.data);
+      setFamilyId(res.data._id); // store familyId for next step
       setStep(2); // move to adding first person
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create family");
@@ -41,17 +47,18 @@ export default function CreateFamily() {
     }
   };
 
+  // Step 2: Add First Person (include familyId in body)
   const addPerson = async (e) => {
     e.preventDefault();
     setError("");
     try {
       setLoading(true);
       await axios.post(
-        "http://localhost:5000/api/v1/person",
-        { ...personData, family: "" }, // family will be inferred in backend from user?
+        "http://localhost:5000/api/v1/persons",
+        { ...personData, family: familyId },
         { withCredentials: true }
       );
-      navigate("/dashboard"); // done
+      navigate("/dashboard"); // redirect after success
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add person");
     } finally {
@@ -61,6 +68,7 @@ export default function CreateFamily() {
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg shadow-md bg-white">
+      {/* STEP 1: CREATE FAMILY */}
       {step === 1 && (
         <>
           <h2 className="text-2xl font-bold mb-4 text-center text-indigo-600">
@@ -78,7 +86,7 @@ export default function CreateFamily() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium">Password (optional)</label>
+              <label className="block text-sm font-medium">Password</label>
               <input
                 type="password"
                 value={password}
@@ -86,7 +94,9 @@ export default function CreateFamily() {
                 className="mt-1 block w-full border rounded p-2"
               />
             </div>
+
             {error && <p className="text-red-500 text-sm">{error}</p>}
+
             <button
               type="submit"
               disabled={loading}
@@ -98,6 +108,7 @@ export default function CreateFamily() {
         </>
       )}
 
+      {/* STEP 2: ADD FIRST PERSON */}
       {step === 2 && (
         <>
           <h2 className="text-2xl font-bold mb-4 text-center text-indigo-600">
@@ -115,6 +126,7 @@ export default function CreateFamily() {
                 className="mt-1 block w-full border rounded p-2"
               />
             </div>
+
             <div>
               <label className="block text-sm font-medium">DOB</label>
               <input
@@ -125,6 +137,7 @@ export default function CreateFamily() {
                 className="mt-1 block w-full border rounded p-2"
               />
             </div>
+
             <div>
               <label className="block text-sm font-medium">Gender</label>
               <select
@@ -138,6 +151,7 @@ export default function CreateFamily() {
                 <option value="other">Other</option>
               </select>
             </div>
+
             <div>
               <label className="block text-sm font-medium">Relation Type</label>
               <select
@@ -157,6 +171,7 @@ export default function CreateFamily() {
                 <option value="other">Other</option>
               </select>
             </div>
+
             <div>
               <label className="block text-sm font-medium">Bio</label>
               <textarea
@@ -166,6 +181,7 @@ export default function CreateFamily() {
                 className="mt-1 block w-full border rounded p-2"
               ></textarea>
             </div>
+
             <div>
               <label className="block text-sm font-medium">Avatar URL</label>
               <input
@@ -178,6 +194,7 @@ export default function CreateFamily() {
             </div>
 
             {error && <p className="text-red-500 text-sm">{error}</p>}
+
             <button
               type="submit"
               disabled={loading}

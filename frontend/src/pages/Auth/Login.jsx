@@ -23,7 +23,7 @@ export default function Login() {
       );
 
       const userData = res.data;
-    //   console.log(res);
+      console.log(res);
 
       // Conditional navigation
       if (userData.user.families && userData.user.families.length > 0) {
@@ -78,7 +78,7 @@ export default function Login() {
 
       <p className="mt-4 text-sm text-center">
         Don’t have an account?{" "}
-        <a href="/signup" className="text-indigo-600 font-medium">
+        <a href="/auth/signup" className="text-indigo-600 font-medium">
           Sign up
         </a>
       </p>
