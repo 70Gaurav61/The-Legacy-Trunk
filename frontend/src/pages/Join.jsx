@@ -69,7 +69,7 @@ export default function JoinFamily({ user }) {
         {...personData, family : familyId}, // No family field — handled by isFamilyMember middleware
         { withCredentials: true }
       );
-      navigate("/dashboard");
+      navigate("/home");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add person");
     } finally {

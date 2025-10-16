@@ -1,14 +1,14 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../services/useAuth.jsx";
 
 export default function Login() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const navigate = useNavigate();
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -16,18 +16,10 @@ export default function Login() {
 
     try {
       setLoading(true);
-      const res = await axios.post(
-        "http://localhost:5000/api/v1/auth/login",
-        { email, password },
-        { withCredentials: true } // for cookies
-      );
+      const user = await login(email, password);
 
-      const userData = res.data;
-      console.log(res);
-
-      // Conditional navigation
-      if (userData.user.families && userData.user.families.length > 0) {
-        navigate("/dashboard");
+      if (user.families && user.families.length > 0) {
+        navigate("/home");
       } else {
         navigate("/choose");
       }

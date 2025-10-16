@@ -1,20 +1,19 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../services/useAuth.jsx";
 
 export default function Signup() {
+  const { signup } = useAuth();
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
-
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
-  const navigate = useNavigate();
-
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -22,7 +21,6 @@ export default function Signup() {
   const onSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
 
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match!");
@@ -31,12 +29,7 @@ export default function Signup() {
 
     try {
       setLoading(true);
-      await axios.post("http://localhost:5000/api/v1/auth/register", {
-        name: form.name,
-        email: form.email,
-        password: form.password,
-      });
-
+      await signup(form.name, form.email, form.password);
       setSuccess("Signup successful! You can now log in.");
       navigate("/auth/login");
     } catch (err) {

@@ -58,7 +58,7 @@ export default function CreateFamily({ user }) {
         { ...personData, family: familyId },
         { withCredentials: true }
       );
-      navigate("/dashboard"); // redirect after success
+      navigate("/home"); // redirect after success
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add person");
     } finally {
