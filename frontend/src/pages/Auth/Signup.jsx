@@ -1,126 +1,316 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../services/useAuth.jsx";
+import axios from "axios";
+import { FiEye, FiEyeOff, FiUser, FiMail, FiLock, FiCheckCircle, FiXCircle, FiLoader } from "react-icons/fi";
+
+const AUTH_BASE = "http://localhost:5000/api/v1/auth";
+const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 
 export default function Signup() {
   const { signup } = useAuth();
   const navigate = useNavigate();
+
   const [form, setForm] = useState({
-    name: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
+
+  // Toggle states for password visibility
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
+
+  const [usernameError, setUsernameError] = useState("");
+  const [usernameAvailable, setUsernameAvailable] = useState(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+
+  const checkIdRef = useRef(0);
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "username") {
+      const trimmed = value.trim();
+      if (trimmed === "") {
+        setUsernameError("");
+        setUsernameAvailable(null);
+        setCheckingUsername(false);
+      } else if (!USERNAME_REGEX.test(trimmed)) {
+        setUsernameError("Only letters, numbers and underscores allowed.");
+        setUsernameAvailable(null);
+        setCheckingUsername(false);
+      } else {
+        setUsernameError("");
+      }
+    }
   };
+
+  useEffect(() => {
+    const username = (form.username || "").trim();
+
+    if (!username || !USERNAME_REGEX.test(username)) {
+      setUsernameAvailable(null);
+      setCheckingUsername(false);
+      return;
+    }
+
+    let cancelled = false;
+    const checkId = ++checkIdRef.current;
+
+    setCheckingUsername(true);
+    setUsernameAvailable(null);
+
+    const handler = setTimeout(async () => {
+      try {
+        const res = await axios.get(`${AUTH_BASE}/check-username`, {
+          params: { username },
+        });
+
+        if (cancelled || checkIdRef.current !== checkId) return;
+        setUsernameAvailable(Boolean(res.data.available));
+      } catch (err) {
+        if (!cancelled && checkIdRef.current === checkId) setUsernameAvailable(null);
+      } finally {
+        if (!cancelled && checkIdRef.current === checkId) setCheckingUsername(false);
+      }
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(handler);
+    };
+  }, [form.username]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
+
+    const username = (form.username || "").trim();
+    if (!USERNAME_REGEX.test(username)) {
+      setUsernameError("Invalid characters in username.");
+      return;
+    }
 
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match!");
       return;
     }
 
+    if (usernameAvailable === false) {
+      setError("Username is already taken.");
+      return;
+    }
+
     try {
       setLoading(true);
-      await signup(form.name, form.email, form.password);
-      setSuccess("Signup successful! You can now log in.");
-      navigate("/auth/login");
+      await signup({
+        username,
+        email: form.email,
+        password: form.password,
+        confirmPassword: form.confirmPassword,
+      });
+
+      setSuccess("Signup successful! Redirecting...");
+      setTimeout(() => navigate("/choose"), 1500);
     } catch (err) {
-      setError(err.response?.data?.message || "Signup failed");
+      const msg = err?.message || err?.response?.data?.message || "Signup failed";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const passwordMismatch = form.password && form.confirmPassword && form.password !== form.confirmPassword;
+  const passwordMismatch =
+    form.password && form.confirmPassword && form.password !== form.confirmPassword;
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 border rounded-lg shadow-md bg-white">
-      <h2 className="text-2xl font-bold mb-4 text-center text-indigo-600">
-        Create Account
-      </h2>
-
-      <form onSubmit={onSubmit} className="space-y-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
         <div>
-          <label className="block text-sm font-medium">Full Name</label>
-          <input
-            type="text"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            required
-            className="mt-1 block w-full border rounded p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
+          <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900">
+            Create an Account
+          </h2>
+          
         </div>
 
-        <div>
-          <label className="block text-sm font-medium">Email</label>
-          <input
-            type="email"
-            name="email"
-            value={form.email}
-            onChange={handleChange}
-            required
-            className="mt-1 block w-full border rounded p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
+        <form className="mt-8 space-y-6" onSubmit={onSubmit} noValidate>
+          <div className="space-y-4">
+            {/* Username Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiUser className="text-gray-400 group-focus-within:text-indigo-500" />
+                </div>
+                <input
+                  type="text"
+                  name="username"
+                  value={form.username}
+                  onChange={handleChange}
+                  className={`block w-full pl-10 pr-10 py-3 border ${
+                    usernameError ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50"
+                  } rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 transition-colors outline-none`}
+                  placeholder="Choose a username"
+                  autoComplete="username"
+                />
+                
+                {/* Status Indicator Icon */}
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  {checkingUsername ? (
+                    <FiLoader className="animate-spin text-gray-400" />
+                  ) : usernameAvailable === true ? (
+                    <FiCheckCircle className="text-green-500" />
+                  ) : usernameAvailable === false ? (
+                    <FiXCircle className="text-red-500" />
+                  ) : null}
+                </div>
+              </div>
+              
+              {/* Status Text */}
+              <div className="h-5 mt-1">
+                {usernameError ? (
+                  <p className="text-xs text-red-500">{usernameError}</p>
+                ) : usernameAvailable === false ? (
+                  <p className="text-xs text-red-500">Username taken</p>
+                ) : usernameAvailable === true ? (
+                  <p className="text-xs text-green-600">Username available</p>
+                ) : (
+                  <p className="text-xs text-gray-400">Letters, numbers & underscore only</p>
+                )}
+              </div>
+            </div>
+
+            {/* Email Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiMail className="text-gray-400 group-focus-within:text-indigo-500" />
+                </div>
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 transition-colors outline-none"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiLock className="text-gray-400 group-focus-within:text-indigo-500" />
+                </div>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  className={`block w-full pl-10 pr-10 py-3 border ${
+                    passwordMismatch ? "border-red-300" : "border-gray-200"
+                  } bg-gray-50 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 transition-colors outline-none`}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm Password Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiLock className="text-gray-400 group-focus-within:text-indigo-500" />
+                </div>
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  className={`block w-full pl-10 pr-10 py-3 border ${
+                    passwordMismatch ? "border-red-300" : "border-gray-200"
+                  } bg-gray-50 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 transition-colors outline-none`}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
+              {passwordMismatch && (
+                <p className="mt-1 text-xs text-red-500 animate-pulse">Passwords do not match</p>
+              )}
+            </div>
+          </div>
+
+          {/* Error / Success Messages */}
+          <div className="text-center">
+            {error && (
+              <div className="p-2 text-sm text-red-600 bg-red-50 rounded border border-red-100">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="p-2 text-sm text-green-600 bg-green-50 rounded border border-green-100">
+                {success}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={
+              loading ||
+              passwordMismatch ||
+              usernameAvailable === false ||
+              checkingUsername ||
+              Boolean(usernameError)
+            }
+            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all transform hover:scale-[1.01] disabled:opacity-70 disabled:cursor-not-allowed shadow-lg"
+          >
+            {loading ? (
+              <span className="flex items-center">
+                <FiLoader className="animate-spin mr-2" /> Creating Account...
+              </span>
+            ) : (
+              "Sign Up"
+            )}
+          </button>
+        </form>
+
+        <div className="text-center mt-4">
+          <p className="text-sm text-gray-600">
+            Already have an account?{" "}
+            <Link to="/auth/login" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
+              Log in
+            </Link>
+          </p>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium">Password</label>
-          <input
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            required
-            className={`mt-1 block w-full border rounded p-2 focus:outline-none ${
-              passwordMismatch ? "border-red-500" : "focus:ring-2 focus:ring-indigo-500"
-            }`}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Confirm Password</label>
-          <input
-            type="password"
-            name="confirmPassword"
-            value={form.confirmPassword}
-            onChange={handleChange}
-            required
-            className={`mt-1 block w-full border rounded p-2 focus:outline-none ${
-              passwordMismatch ? "border-red-500" : "focus:ring-2 focus:ring-indigo-500"
-            }`}
-          />
-          {passwordMismatch && (
-            <p className="text-red-500 text-sm mt-1">Passwords do not match</p>
-          )}
-        </div>
-
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        {success && <p className="text-green-500 text-sm">{success}</p>}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition disabled:opacity-70"
-        >
-          {loading ? "Signing up..." : "Sign Up"}
-        </button>
-      </form>
-
-      <p className="mt-4 text-sm text-center">
-        Already have an account?{" "}
-        <a href="/auth/login" className="text-indigo-600 font-medium">
-          Login
-        </a>
-      </p>
+      </div>
     </div>
   );
 }

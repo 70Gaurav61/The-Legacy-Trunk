@@ -38,7 +38,6 @@ export default function App() {
                 <Route path="/auth/signup" element={<Signup />} />
               </>
             )}
-
             {/* Private routes (only if user exists) */}
             {user && (
               <>

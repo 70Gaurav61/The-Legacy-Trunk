@@ -1,62 +1,94 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
 
-// ✅ Create Context
 const AuthContext = createContext();
 
-// ✅ Axios defaults (important for cookies)
-axios.defaults.withCredentials = true;
+// Create axios instance for auth API
+const api = axios.create({
+  baseURL: "http://localhost:5000/api/v1/auth",
+  withCredentials: true, // important for cookies
+});
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // --- Fetch user on app start (auto-login if cookie exists)
+  // Fetch user on app start (auto-login if cookie exists)
   useEffect(() => {
+    let mounted = true;
     const fetchUser = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/v1/auth/me", {
-          withCredentials: true,
-        });
-        setUser(res.data.user);
+        const res = await api.get("/me");
+        if (mounted) setUser(res.data.user || null);
       } catch (err) {
-        setUser(null);
+        if (mounted) setUser(null);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
     fetchUser();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  // --- Login
-  const login = async (email, password) => {
-    const res = await axios.post(
-      "http://localhost:5000/api/v1/auth/login",
-      { email, password },
-      { withCredentials: true }
-    );
-    setUser(res.data.user);
-    return res.data.user;
+  // Login: identifier can be username OR email
+  // usage: await login("ashish123", "password") OR login("ashish@example.com", "password")
+  const login = async (identifier, password) => {
+    try {
+      if (!identifier || !password) throw new Error("Identifier and password are required");
+
+      // simple heuristic: treat as email if contains '@'
+      const isEmail = identifier.includes("@");
+      const payload = isEmail
+        ? { email: identifier }
+        : { username: identifier };
+
+      payload.password = password;
+
+      const res = await api.post("/login", payload);
+      setUser(res.data.user);
+      return res.data.user;
+    } catch (err) {
+      // normalize error message
+      const message = err?.response?.data?.message || err.message || "Login failed";
+      throw new Error(message);
+    }
   };
 
-  // --- Signup
-  const signup = async (name, email, password) => {
-    const res = await axios.post("http://localhost:5000/api/v1/auth/register", {
-      name,
-      email,
-      password,
-    });
-    return res.data;
+  // Signup (register)
+  // usage: await signup({ username, email, password, confirmPassword })
+  const signup = async ({ username, email, password, confirmPassword }) => {
+    try {
+      if (!username || !email || !password || !confirmPassword) {
+        throw new Error("username, email, password and confirmPassword are required");
+      }
+
+      const res = await api.post("/register", {
+        username,
+        email,
+        password,
+        confirmPassword,
+      });
+
+      // server returns user and sets cookie. Set user in state.
+      if (res?.data?.user) setUser(res.data.user);
+      return res.data;
+    } catch (err) {
+      const message = err?.response?.data?.message || err.message || "Signup failed";
+      throw new Error(message);
+    }
   };
 
-  // --- Logout
+  // Logout
   const logout = async () => {
-    await axios.post(
-      "http://localhost:5000/api/v1/auth/logout",
-      {},
-      { withCredentials: true }
-    );
-    setUser(null);
+    try {
+      await api.post("/logout");
+    } catch (err) {
+      // ignore network errors on logout, still clear client state
+    } finally {
+      setUser(null);
+    }
   };
 
   return (
@@ -75,7 +107,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// ✅ Custom Hook
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);

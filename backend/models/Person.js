@@ -6,15 +6,22 @@ const PersonSchema = new mongoose.Schema({
   dob: Date,
   gender: { type: String, enum: ["male","female","other"] },
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // optional
-  relationTo: { type: mongoose.Schema.Types.ObjectId, ref: "Person" }, // parent
-  relationType: { type: String, enum: ["father","mother","son","daughter","spouse","sibling","grandfather","grandmother","other", "Admin"], default: "other" },
-  generation: { type: Number, index: true }, // computed on create/update
+  relationTo: { type: mongoose.Schema.Types.ObjectId, ref: "Person" }, // parent or related person
+  relationType: { 
+    type: String, 
+    enum: ["father","mother","son","daughter","spouse","sibling","grandfather","grandmother","other","Admin"], 
+    default: "other" 
+  },
+  generation: { type: Number, index: true },
   avatarUrl: String,
-  bio: String
+  bio: String,
+
+  // 🆕 Added field: store direct children for easy population in tree
+  children: [{ type: mongoose.Schema.Types.ObjectId, ref: "Person" }],  // ✅ NEW FIELD
 }, { timestamps: true });
 
 
-// Auto-calculate generation
+// 🧠 Auto-calculate generation (unchanged logic, works fine)
 PersonSchema.pre("save", async function (next) {
   if (!this.isModified("relationTo")) return next();
   if (!this.relationTo) {
@@ -40,6 +47,5 @@ PersonSchema.pre("save", async function (next) {
   }
   next();
 });
-
 
 export default mongoose.model("Person", PersonSchema);
