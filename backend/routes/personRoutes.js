@@ -8,6 +8,7 @@ import {
   getAncestors,   
   getFullTree,    
   generateClaimCode,
+  getManagedPersons, 
 } from "../controllers/personController.js";
 import { verifyAuth } from "../middlewares/auth/verifyAuth.js";
 import { isFamilyMember } from "../middlewares/access/isFamilyMember.js";
@@ -15,29 +16,34 @@ import { isFamilyMember } from "../middlewares/access/isFamilyMember.js";
 const router = express.Router();
 
 // ==========================================
-// 🟢 1. STATIC ROUTES (Must be first)
+// 🟢 1. GENERAL ROUTES (Use verifyAuth only)
 // ==========================================
+// These fetch data based on the LOGGED-IN USER, so they don't need an ID check.
 
-// Tree Visualizations
-router.get("/tree/descendants", verifyAuth, isFamilyMember, getDescendants);
-router.get("/tree/ancestors", verifyAuth, isFamilyMember, getAncestors); // Auto-detects self
-router.get("/tree/ancestors/:personId", verifyAuth, isFamilyMember, getAncestors); // Specific person
-router.get("/tree/whole", verifyAuth, isFamilyMember, getFullTree);
+router.get("/managed", verifyAuth, getManagedPersons);
+router.get("/tree/descendants", verifyAuth, getDescendants);
+router.get("/tree/ancestors", verifyAuth, getAncestors); 
+router.get("/tree/whole", verifyAuth, getFullTree); 
 
-// Standard List (Flat)
-router.get("/", verifyAuth, isFamilyMember, getPersons);
+// Standard List (Fetches based on user's family)
+router.get("/", verifyAuth, getPersons);
 
-// Add Person
+
+// ==========================================
+// 🔒 2. SPECIFIC ID ROUTES (Use isFamilyMember)
+// ==========================================
+// These access a specific person/family, so we MUST check if the user is allowed.
+
+// Add Person (Checks if you are in the family you are adding to)
 router.post("/", verifyAuth, isFamilyMember, addPerson);
 
-// ==========================================
-// 🟢 2. DYNAMIC ID ROUTES (Must be last)
-// ==========================================
-
-// Invite Route (Specific logic for a person ID)
+// Invite Route
 router.post("/:personId/invite", verifyAuth, isFamilyMember, generateClaimCode);
 
-// Update/Delete (Catch-all for IDs)
+// Specific Ancestor 
+router.get("/tree/ancestors/:personId", verifyAuth, isFamilyMember, getAncestors);
+
+// Update/Delete
 router.put("/:personId", verifyAuth, isFamilyMember, updatePerson);
 router.delete("/:personId", verifyAuth, isFamilyMember, deletePerson);
 

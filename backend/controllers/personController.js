@@ -4,10 +4,9 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 
 // ==========================================
-// 🧠 HELPER: Recursive Tree Builder (Dynamic Depth)
+// 🧠 HELPER: Recursive Tree Builder
 // ==========================================
 const nestChildren = (rootId, allPeople, allSpouses, currentLevel) => {
-  // 1. Filter for Children Only (Strictly Son/Daughter)
   const children = allPeople.filter(p => 
     p.relationTo && 
     p.relationTo.toString() === rootId.toString() &&
@@ -17,15 +16,13 @@ const nestChildren = (rootId, allPeople, allSpouses, currentLevel) => {
   if (children.length === 0) return [];
 
   return children.map(child => {
-    // 2. Find Spouse for this child (STRICT CHECK)
-    // 🟢 FIX: Ensure the person found is actually a SPOUSE, not another child/sibling
+    // strict spouse check
     let spouse = allSpouses.find(s => 
       s.relationTo && 
       s.relationTo.toString() === child._id.toString() &&
-      ["spouse", "wife", "husband"].includes(s.relationType) // 👈 CRITICAL FIX
+      ["spouse", "wife", "husband"].includes(s.relationType)
     );
 
-    // Check reverse link (Child -> Spouse)
     if (!spouse) {
       spouse = allSpouses.find(s => 
         child.relationTo && 
@@ -41,7 +38,6 @@ const nestChildren = (rootId, allPeople, allSpouses, currentLevel) => {
       avatarUrl: child.avatarUrl,
       relationType: child.relationType,
       generation: currentLevel, 
-
       spouse: spouse ? { 
         _id: spouse._id, 
         name: spouse.name, 
@@ -50,7 +46,6 @@ const nestChildren = (rootId, allPeople, allSpouses, currentLevel) => {
         relationType: spouse.relationType,
         generation: currentLevel 
       } : null,
-      
       children: nestChildren(child._id, allPeople, allSpouses, currentLevel + 1)
     };
   });
@@ -60,12 +55,12 @@ const nestChildren = (rootId, allPeople, allSpouses, currentLevel) => {
 // 🟢 CONTROLLER METHODS
 // ==========================================
 
-// 1. Add Person
 export const addPerson = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // Use req.family if exists, otherwise try user's first family
     const familyId = req.family?._id || user.families[0];
     if (!familyId) return res.status(400).json({ message: "You must join a family first." });
 
@@ -73,7 +68,6 @@ export const addPerson = async (req, res) => {
     let finalRelationType = req.body.relationType;
     let isGraftingUpwards = ["father", "mother"].includes(finalRelationType?.toLowerCase());
 
-    // Link Mother as Spouse if Father exists
     if (isGraftingUpwards && req.body.relationTo) {
       const child = await Person.findById(req.body.relationTo);
       if (child && child.relationTo) {
@@ -122,7 +116,6 @@ export const addPerson = async (req, res) => {
   }
 };
 
-// 2. Generate Invite Code
 export const generateClaimCode = async (req, res) => {
   try {
     const { personId } = req.params;
@@ -139,7 +132,6 @@ export const generateClaimCode = async (req, res) => {
   }
 };
 
-// 3. Get Descendants
 export const getDescendants = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate("persons");
@@ -205,7 +197,6 @@ export const getDescendants = async (req, res) => {
   }
 };
 
-// 4. Get Ancestors
 export const getAncestors = async (req, res) => {
   try {
     let startPersonId = req.params.personId;
@@ -269,11 +260,26 @@ export const getAncestors = async (req, res) => {
   }
 };
 
-// 5. Get Whole Tree (With STRICT Spouse Check)
+// ==========================================
+// 🟢 5. Get Whole Tree (FIXED)
+// ==========================================
 export const getFullTree = async (req, res) => {
   try {
-    const familyId = req.family?._id;
-    if (!familyId) return res.status(400).json({ message: "No family found" });
+    // 🟢 FIX: Do not rely on req.family. Find family from User's profile.
+    let familyId = req.family?._id;
+
+    if (!familyId) {
+        // Find the user's Primary Person to get the family ID
+        const user = await User.findById(req.user._id).select("primaryPerson");
+        if (user && user.primaryPerson) {
+            const person = await Person.findById(user.primaryPerson).select("family");
+            if (person) familyId = person.family;
+        }
+    }
+
+    if (!familyId) {
+        return res.status(400).json({ message: "No family link found for this user." });
+    }
 
     const allPeople = await Person.find({ family: familyId }).lean();
     if (allPeople.length === 0) return res.json({ tree: [] });
@@ -282,17 +288,18 @@ export const getFullTree = async (req, res) => {
     const roots = allPeople.filter(p => {
        if (!p.relationTo) return true; 
        if (["other"].includes(p.relationType)) return true;
+       
+       // Check if the parent actually exists in this list
        const parentExists = allPeople.some(parent => parent._id.toString() === p.relationTo.toString());
        return !parentExists; 
     });
 
     const tree = roots.map(root => {
-      // 🟢 FIX: Strict Spouse Check for Roots
-      // Don't grab a son/daughter as a spouse
+      // Spouse Check
       let spouse = allPeople.find(s => 
         s.relationTo && 
         s.relationTo.toString() === root._id.toString() &&
-        ["spouse", "wife", "husband"].includes(s.relationType) // 👈 CRITICAL FIX
+        ["spouse", "wife", "husband"].includes(s.relationType)
       );
       
       if (!spouse) {
@@ -303,6 +310,7 @@ export const getFullTree = async (req, res) => {
         );
       }
       
+      // Prevent duplicates if spouse is listed as root separately
       if (["wife", "spouse"].includes(root.relationType) && root.relationTo) return null;
 
       return {
@@ -328,17 +336,19 @@ export const getFullTree = async (req, res) => {
   }
 };
 
-// 6. Get Flat List
 export const getPersons = async (req, res) => {
   try {
-    const persons = await Person.find({ family: req.family._id }).populate("relationTo", "name").lean();
+    // 🟢 Fix: Ensure we have a family ID here too
+    const user = await User.findById(req.user._id).populate("primaryPerson");
+    const familyId = req.family?._id || user.families[0];
+
+    const persons = await Person.find({ family: familyId }).populate("relationTo", "name").lean();
     res.json(persons);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// 7. Update Person
 export const updatePerson = async (req, res) => { 
   try {
     const person = await Person.findByIdAndUpdate(req.params.personId, req.body, { new: true });
@@ -346,10 +356,24 @@ export const updatePerson = async (req, res) => {
   } catch(err) { res.status(500).json({message: err.message}) }
 };
 
-// 8. Delete Person
 export const deletePerson = async (req, res) => { 
   try {
     await Person.findByIdAndDelete(req.params.personId);
     res.json({ message: "Deleted" });
   } catch(err) { res.status(500).json({message: err.message}) }
+};
+
+export const getManagedPersons = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate("persons");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const sidebarList = user.persons.filter(p => 
+      p._id.toString() !== user.primaryPerson?.toString()
+    );
+
+    res.json(sidebarList);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };

@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom"; // 🟢 Added Outlet
 import { useAuth } from "./services/useAuth";
 
 import Header from "./components/Header";
@@ -13,48 +13,60 @@ import Circles from "./pages/Circles";
 import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
 import Choose from "./pages/Choose";
-import FamilyTree from "./components/FamilyTree";
+import TreePage from "./pages/TreePage";
+
+// 🟢 1. Create a Layout for standard pages (Restores the container look)
+const StandardLayout = () => (
+  <div className="container mx-auto px-4 py-6">
+    <Outlet />
+  </div>
+);
 
 export default function App() {
   const { user } = useAuth();
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen">
+      <div className="min-h-screen flex flex-col">
         <Header />
 
-        <main className="container py-6">
+        {/* 🟢 2. REMOVED "container" from here. Now Main is full width. */}
+        <main className="flex-1 w-full p-3 bg-gray-50">
           <Routes>
-            {/* If user exists → go to dashboard, else login */}
+            {/* Redirect logic */}
             <Route
               path="/"
               element={user ? <Navigate to="/home" /> : <Navigate to="/auth/login" />}
             />
 
-            {/* Public routes */}
+            {/* Public Routes (Wrapped in StandardLayout to keep them centered) */}
             {!user && (
-              <>
+              <Route element={<StandardLayout />}>
                 <Route path="/auth/login" element={<Login />} />
                 <Route path="/auth/signup" element={<Signup />} />
-              </>
-            )}
-            {/* Private routes (only if user exists) */}
-            {user && (
-              <>
-                <Route path="/home" element={<Home />} />
-                <Route path="/stories" element={<Stories />} />
-                <Route path="/stories/:id" element={<StoryDetail />} />
-                <Route path="/create" element={<Create />} />
-                <Route path="/timeline" element={<TimelinePage />} />
-                <Route path="/circles" element={<Circles />} />
-                <Route path="/choose" element={<Choose />} />
-                <Route path="/join" element={<Join />} />
-                <Route path="/family-tree" element={<FamilyTree />} />
-              </>
+              </Route>
             )}
 
-            {/* Catch all unmatched routes */}
-            {/* <Route path="*" element={<Navigate to="/" />} /> */}
+            {/* Private Routes */}
+            {user && (
+              <>
+                {/* 🟢 3. WRAP NORMAL PAGES IN STANDARD LAYOUT */}
+                <Route element={<StandardLayout />}>
+                  <Route path="/home" element={<Home />} />
+                  <Route path="/stories" element={<Stories />} />
+                  <Route path="/stories/:id" element={<StoryDetail />} />
+                  <Route path="/create" element={<Create />} />
+                  <Route path="/timeline" element={<TimelinePage />} />
+                  <Route path="/circles" element={<Circles />} />
+                  <Route path="/choose" element={<Choose />} />
+                  <Route path="/join" element={<Join />} />
+                </Route>
+
+                {/* 🟢 4. KEEP TREE PAGE SEPARATE (Full Width) */}
+                {/* This allows TreePage to stretch 100% edge-to-edge */}
+                <Route path="/family-tree" element={<TreePage />} />
+              </>
+            )}
           </Routes>
         </main>
       </div>

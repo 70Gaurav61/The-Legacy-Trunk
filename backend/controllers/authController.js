@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import Person from "../models/Person.js";
+import Family from "../models/Family.js"; // 🟢 IMPORT ADDED
 
 const sanitizeUser = (user) => {
   if (!user) return null;
@@ -43,38 +44,56 @@ export const register = async (req, res) => {
   }
 };
 
-// 🟢 2. Register via Claim Code (Special "Invite" Registration)
+// 🟢 2. Register via Claim Code (FIXED & COMPLETE)
 export const registerAndClaim = async (req, res) => {
   const { username, email, password, claimCode } = req.body;
 
   try {
+    // Check duplicates
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ message: "Email already used" });
 
-    // Validate Code
+    // 1. Find & Validate Person
     const person = await Person.findOne({ claimCode }).select("+claimCode");
+    
     if (!person) return res.status(404).json({ message: "Invalid claim code" });
     if (person.isClaimed) return res.status(400).json({ message: "Profile already claimed" });
+    
+    // Check for Family Link
+    if (!person.family) {
+        return res.status(500).json({ message: "Error: This profile is not linked to any family tree." });
+    }
 
-    // Create User & Link
+    // 2. Create the User
     const user = await User.create({ username, email, password });
     
+    // 3. Link Person & Family to User
     user.primaryPerson = person._id;
-    user.persons = [person._id];
+    user.persons = [person._id]; 
     user.families = [person.family]; 
+
+    // 🟢 4. CRITICAL FIX: Add User to the Family's 'members' list
+    // This ensures middleware like 'isFamilyMember' works correctly.
+    await Family.findByIdAndUpdate(person.family, {
+        $addToSet: { members: user._id } 
+    });
     
+    // 5. Update Person status
     person.user = user._id;
     person.isClaimed = true;
-    person.claimCode = undefined;
+    person.claimCode = undefined; 
 
+    // 6. Save User & Person
     await user.save();
     await person.save();
 
+    // 7. Generate Token & Respond
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
     res.cookie("token", token, cookieOptions());
 
-    res.status(201).json({ user: sanitizeUser(user), message: "Profile claimed!" });
+    res.status(201).json({ user: sanitizeUser(user), message: "Profile claimed! Welcome to the family." });
   } catch (err) {
+    console.error("Claim Error:", err);
     res.status(500).json({ message: err.message });
   }
 };
