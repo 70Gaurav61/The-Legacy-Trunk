@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../../services/useAuth.jsx";
-import axios from "axios";
-import { FiEye, FiEyeOff, FiUser, FiMail, FiLock, FiCheckCircle, FiXCircle, FiLoader } from "react-icons/fi";
+import { useNavigate, Link, useSearchParams } from "react-router-dom"; // ✅ Added useSearchParams
+import { useAuth, api } from "../../services/useAuth.jsx"; // ✅ Import api for username check
+import { FiEye, FiEyeOff, FiUser, FiMail, FiLock, FiCheckCircle, FiXCircle, FiLoader, FiGift } from "react-icons/fi";
 
-const AUTH_BASE = "http://localhost:5000/api/v1/auth";
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 
 export default function Signup() {
-  const { signup } = useAuth();
+  const { signup, registerAndClaim } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams(); // ✅ Get URL params
+
+  // Check if this is an "Invite" flow
+  const inviteCode = searchParams.get("code");
 
   const [form, setForm] = useState({
     username: "",
@@ -18,7 +20,6 @@ export default function Signup() {
     confirmPassword: "",
   });
 
-  // Toggle states for password visibility
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -32,6 +33,7 @@ export default function Signup() {
 
   const checkIdRef = useRef(0);
 
+  // Handle Input Change
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -52,9 +54,9 @@ export default function Signup() {
     }
   };
 
+  // Debounce Username Check
   useEffect(() => {
     const username = (form.username || "").trim();
-
     if (!username || !USERNAME_REGEX.test(username)) {
       setUsernameAvailable(null);
       setCheckingUsername(false);
@@ -63,16 +65,15 @@ export default function Signup() {
 
     let cancelled = false;
     const checkId = ++checkIdRef.current;
-
     setCheckingUsername(true);
     setUsernameAvailable(null);
 
     const handler = setTimeout(async () => {
       try {
-        const res = await axios.get(`${AUTH_BASE}/check-username`, {
+        // Use the 'api' instance from useAuth instead of raw axios
+        const res = await api.get(`/auth/check-username`, {
           params: { username },
         });
-
         if (cancelled || checkIdRef.current !== checkId) return;
         setUsernameAvailable(Boolean(res.data.available));
       } catch (err) {
@@ -88,6 +89,7 @@ export default function Signup() {
     };
   }, [form.username]);
 
+  // Submit Handler
   const onSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -98,12 +100,10 @@ export default function Signup() {
       setUsernameError("Invalid characters in username.");
       return;
     }
-
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match!");
       return;
     }
-
     if (usernameAvailable === false) {
       setError("Username is already taken.");
       return;
@@ -111,15 +111,29 @@ export default function Signup() {
 
     try {
       setLoading(true);
-      await signup({
-        username,
-        email: form.email,
-        password: form.password,
-        confirmPassword: form.confirmPassword,
-      });
 
-      setSuccess("Signup successful! Redirecting...");
-      setTimeout(() => navigate("/choose"), 1500);
+      if (inviteCode) {
+        // 🟢 FLOW A: Register & Claim (Invite)
+        await registerAndClaim({
+          username,
+          email: form.email,
+          password: form.password,
+          claimCode: inviteCode, // ✅ Pass the code
+        });
+        setSuccess("Profile claimed! Welcome to the family.");
+        setTimeout(() => navigate("/dashboard"), 1500); // Go straight to tree
+      } else {
+        // 🟢 FLOW B: Standard Register -> Choose
+        await signup({
+          username,
+          email: form.email,
+          password: form.password,
+          confirmPassword: form.confirmPassword,
+        });
+        setSuccess("Account created! Let's find your family...");
+        setTimeout(() => navigate("/choose"), 1500); // Go to Choose Family page
+      }
+
     } catch (err) {
       const msg = err?.message || err?.response?.data?.message || "Signup failed";
       setError(msg);
@@ -136,13 +150,18 @@ export default function Signup() {
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
         <div>
           <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900">
-            Create an Account
+            {inviteCode ? "Claim Your Profile" : "Create an Account"}
           </h2>
-          
+          {inviteCode && (
+            <div className="mt-2 flex items-center justify-center text-sm text-indigo-600 bg-indigo-50 p-2 rounded-lg border border-indigo-100">
+              <FiGift className="mr-2" /> You are joining via an invite link
+            </div>
+          )}
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={onSubmit} noValidate>
           <div className="space-y-4">
+            
             {/* Username Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
@@ -161,8 +180,6 @@ export default function Signup() {
                   placeholder="Choose a username"
                   autoComplete="username"
                 />
-                
-                {/* Status Indicator Icon */}
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                   {checkingUsername ? (
                     <FiLoader className="animate-spin text-gray-400" />
@@ -173,18 +190,10 @@ export default function Signup() {
                   ) : null}
                 </div>
               </div>
-              
-              {/* Status Text */}
               <div className="h-5 mt-1">
-                {usernameError ? (
-                  <p className="text-xs text-red-500">{usernameError}</p>
-                ) : usernameAvailable === false ? (
-                  <p className="text-xs text-red-500">Username taken</p>
-                ) : usernameAvailable === true ? (
-                  <p className="text-xs text-green-600">Username available</p>
-                ) : (
-                  <p className="text-xs text-gray-400">Letters, numbers & underscore only</p>
-                )}
+                {usernameError ? <p className="text-xs text-red-500">{usernameError}</p> : 
+                 usernameAvailable === false ? <p className="text-xs text-red-500">Username taken</p> : 
+                 usernameAvailable === true ? <p className="text-xs text-green-600">Username available</p> : null}
               </div>
             </div>
 
@@ -207,7 +216,7 @@ export default function Signup() {
               </div>
             </div>
 
-            {/* Password Field */}
+            {/* Password Fields */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
               <div className="relative group">
@@ -219,11 +228,8 @@ export default function Signup() {
                   name="password"
                   value={form.password}
                   onChange={handleChange}
-                  className={`block w-full pl-10 pr-10 py-3 border ${
-                    passwordMismatch ? "border-red-300" : "border-gray-200"
-                  } bg-gray-50 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 transition-colors outline-none`}
+                  className="block w-full pl-10 pr-10 py-3 border border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 transition-colors outline-none"
                   placeholder="••••••••"
-                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -235,7 +241,6 @@ export default function Signup() {
               </div>
             </div>
 
-            {/* Confirm Password Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
               <div className="relative group">
@@ -251,7 +256,6 @@ export default function Signup() {
                     passwordMismatch ? "border-red-300" : "border-gray-200"
                   } bg-gray-50 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 transition-colors outline-none`}
                   placeholder="••••••••"
-                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -261,43 +265,24 @@ export default function Signup() {
                   {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
                 </button>
               </div>
-              {passwordMismatch && (
-                <p className="mt-1 text-xs text-red-500 animate-pulse">Passwords do not match</p>
-              )}
+              {passwordMismatch && <p className="mt-1 text-xs text-red-500 animate-pulse">Passwords do not match</p>}
             </div>
           </div>
 
-          {/* Error / Success Messages */}
           <div className="text-center">
-            {error && (
-              <div className="p-2 text-sm text-red-600 bg-red-50 rounded border border-red-100">
-                {error}
-              </div>
-            )}
-            {success && (
-              <div className="p-2 text-sm text-green-600 bg-green-50 rounded border border-green-100">
-                {success}
-              </div>
-            )}
+            {error && <div className="p-2 text-sm text-red-600 bg-red-50 rounded border border-red-100">{error}</div>}
+            {success && <div className="p-2 text-sm text-green-600 bg-green-50 rounded border border-green-100">{success}</div>}
           </div>
 
           <button
             type="submit"
-            disabled={
-              loading ||
-              passwordMismatch ||
-              usernameAvailable === false ||
-              checkingUsername ||
-              Boolean(usernameError)
-            }
+            disabled={loading || passwordMismatch || usernameAvailable === false || checkingUsername || Boolean(usernameError)}
             className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all transform hover:scale-[1.01] disabled:opacity-70 disabled:cursor-not-allowed shadow-lg"
           >
             {loading ? (
-              <span className="flex items-center">
-                <FiLoader className="animate-spin mr-2" /> Creating Account...
-              </span>
+              <span className="flex items-center"><FiLoader className="animate-spin mr-2" /> {inviteCode ? "Claiming..." : "Creating Account..."}</span>
             ) : (
-              "Sign Up"
+              inviteCode ? "Claim Profile" : "Sign Up"
             )}
           </button>
         </form>

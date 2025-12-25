@@ -3,9 +3,10 @@ import axios from "axios";
 
 const AuthContext = createContext();
 
-// Create axios instance for auth API
-const api = axios.create({
-  baseURL: "http://localhost:5000/api/v1/auth",
+// 🟢 FIX: Base URL is now the API Root (removed "/auth")
+// This allows this instance to be used for /person, /family, AND /auth routes.
+export const api = axios.create({
+  baseURL: "http://localhost:5000/api/v1",
   withCredentials: true, // important for cookies
 });
 
@@ -18,7 +19,8 @@ export const AuthProvider = ({ children }) => {
     let mounted = true;
     const fetchUser = async () => {
       try {
-        const res = await api.get("/me");
+        // 🟢 UPDATED: Added "/auth" prefix
+        const res = await api.get("/auth/me");
         if (mounted) setUser(res.data.user || null);
       } catch (err) {
         if (mounted) setUser(null);
@@ -32,46 +34,35 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  // Login: identifier can be username OR email
-  // usage: await login("ashish123", "password") OR login("ashish@example.com", "password")
+  // Login
   const login = async (identifier, password) => {
     try {
       if (!identifier || !password) throw new Error("Identifier and password are required");
 
-      // simple heuristic: treat as email if contains '@'
       const isEmail = identifier.includes("@");
-      const payload = isEmail
-        ? { email: identifier }
-        : { username: identifier };
-
+      const payload = isEmail ? { email: identifier } : { username: identifier };
       payload.password = password;
 
-      const res = await api.post("/login", payload);
+      // 🟢 UPDATED: Added "/auth" prefix
+      const res = await api.post("/auth/login", payload);
       setUser(res.data.user);
       return res.data.user;
     } catch (err) {
-      // normalize error message
       const message = err?.response?.data?.message || err.message || "Login failed";
       throw new Error(message);
     }
   };
 
-  // Signup (register)
-  // usage: await signup({ username, email, password, confirmPassword })
+  // 🟢 1. Standard Signup
   const signup = async ({ username, email, password, confirmPassword }) => {
     try {
-      if (!username || !email || !password || !confirmPassword) {
-        throw new Error("username, email, password and confirmPassword are required");
-      }
-
-      const res = await api.post("/register", {
+      // 🟢 UPDATED: Added "/auth" prefix
+      const res = await api.post("/auth/register", {
         username,
         email,
         password,
         confirmPassword,
       });
-
-      // server returns user and sets cookie. Set user in state.
       if (res?.data?.user) setUser(res.data.user);
       return res.data;
     } catch (err) {
@@ -80,12 +71,30 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 🟢 2. Claim Signup
+  const registerAndClaim = async ({ username, email, password, claimCode }) => {
+    try {
+      // 🟢 UPDATED: Added "/auth" prefix
+      const res = await api.post("/auth/register-claim", {
+        username,
+        email,
+        password,
+        claimCode,
+      });
+      // This user will have primaryPerson set immediately
+      if (res?.data?.user) setUser(res.data.user);
+      return res.data;
+    } catch (err) {
+      const message = err?.response?.data?.message || err.message || "Claim failed";
+      throw new Error(message);
+    }
+  };
+
   // Logout
   const logout = async () => {
     try {
-      await api.post("/logout");
-    } catch (err) {
-      // ignore network errors on logout, still clear client state
+      // 🟢 UPDATED: Added "/auth" prefix
+      await api.post("/auth/logout");
     } finally {
       setUser(null);
     }
@@ -98,8 +107,10 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         signup,
+        registerAndClaim,
         logout,
-        setUser, // optional: in case you want manual update
+        setUser,
+        api // Exporting this allowing calls to api.get('/person/tree/...') to work correctly now
       }}
     >
       {children}

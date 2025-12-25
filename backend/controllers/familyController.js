@@ -2,10 +2,12 @@ import Family from "../models/Family.js";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 
-// Create Family
+// 🟢 Create Family
 export const createFamily = async (req, res) => {
   try {
     const { name, password } = req.body;
+    
+    // Create the family document
     const family = await Family.create({
       name,
       password,
@@ -13,9 +15,11 @@ export const createFamily = async (req, res) => {
       members: [req.user._id],
     });
 
-    // Add family to user
-    req.user.families.push(family._id);
-    await req.user.save();
+    // Add this family ID to the User's list
+    // (Using $addToSet ensures no duplicates, though unnecessary here on create)
+    await User.findByIdAndUpdate(req.user._id, {
+      $addToSet: { families: family._id }
+    });
 
     res.status(201).json(family);
   } catch (err) {
@@ -23,36 +27,55 @@ export const createFamily = async (req, res) => {
   }
 };
 
-// Join Family
+// 🟢 Join Family (Step 2 of Workflow)
 export const joinFamily = async (req, res) => {
   try {
     const { familyCode, password } = req.body;
+    
+    // 1. Find Family by unique code
     const family = await Family.findOne({ familyCode });
     if (!family) return res.status(404).json({ message: "Family not found" });
 
+    // 2. Verify Password
     const isMatch = await bcrypt.compare(password, family.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid password" });
 
-    if (!family.members.includes(req.user._id)) {
-      family.members.push(req.user._id);
-      await family.save();
-    }
+    // 3. Add User to Family Members (if not already there)
+    // We use $addToSet which handles the "includes" check natively in MongoDB
+    await Family.findByIdAndUpdate(family._id, {
+      $addToSet: { members: req.user._id }
+    });
 
-    if (!req.user.families.includes(family._id)) {
-      req.user.families.push(family._id);
-      await req.user.save();
-    }
+    // 4. Add Family to User's list
+    await User.findByIdAndUpdate(req.user._id, {
+      $addToSet: { families: family._id }
+    });
 
-    res.json(family);
+    res.json({ message: "Joined family successfully", family });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Get family members
+// 🟢 Get Family Members
 export const getMembers = async (req, res) => {
   try {
-    await req.family.populate("members", "-password");
+    // We assume 'req.family' is set by middleware (e.g., checkFamilyAccess)
+    if (!req.family) {
+      return res.status(400).json({ message: "Family context missing" });
+    }
+
+    // Populate members AND their linked Person profile (primaryPerson)
+    // This lets the frontend show "Arthur Weasley" instead of just "user_arthur"
+    await req.family.populate({
+      path: "members",
+      select: "username email avatarUrl primaryPerson", // Select specific user fields
+      populate: {
+        path: "primaryPerson",
+        select: "name avatarUrl relationType" // Get the real name from the Person model
+      }
+    });
+
     res.json(req.family.members);
   } catch (err) {
     res.status(500).json({ message: err.message });

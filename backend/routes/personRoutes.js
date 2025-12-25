@@ -4,31 +4,41 @@ import {
   getPersons,
   updatePerson,
   deletePerson,
-  addChild,
-  getCurrentUserTree,
-  getWholeFamilyTree,
-  getFamilyTree,
+  getDescendants, 
+  getAncestors,   
+  getFullTree,    
+  generateClaimCode,
 } from "../controllers/personController.js";
 import { verifyAuth } from "../middlewares/auth/verifyAuth.js";
 import { isFamilyMember } from "../middlewares/access/isFamilyMember.js";
 
 const router = express.Router();
 
-router.post("/", verifyAuth, isFamilyMember, addPerson);
+// ==========================================
+// 🟢 1. STATIC ROUTES (Must be first)
+// ==========================================
+
+// Tree Visualizations
+router.get("/tree/descendants", verifyAuth, isFamilyMember, getDescendants);
+router.get("/tree/ancestors", verifyAuth, isFamilyMember, getAncestors); // Auto-detects self
+router.get("/tree/ancestors/:personId", verifyAuth, isFamilyMember, getAncestors); // Specific person
+router.get("/tree/whole", verifyAuth, isFamilyMember, getFullTree);
+
+// Standard List (Flat)
 router.get("/", verifyAuth, isFamilyMember, getPersons);
-router.put("/:personId", verifyAuth, updatePerson);
-router.delete("/:personId", verifyAuth, deletePerson);
 
-// 🆕 Add child to a parent
-router.post("/child/:parentId", verifyAuth, isFamilyMember, addChild);
+// Add Person
+router.post("/", verifyAuth, isFamilyMember, addPerson);
 
-// 🆕 Get family tree starting from current user's primary person
-router.get("/tree/current", verifyAuth, isFamilyMember, getCurrentUserTree);
+// ==========================================
+// 🟢 2. DYNAMIC ID ROUTES (Must be last)
+// ==========================================
 
-// 🆕 Get whole family tree (all roots)
-router.get("/tree/whole", verifyAuth, isFamilyMember, getWholeFamilyTree);
+// Invite Route (Specific logic for a person ID)
+router.post("/:personId/invite", verifyAuth, isFamilyMember, generateClaimCode);
 
-// 🆕 Optional: generic family tree
-router.get("/tree", verifyAuth, isFamilyMember, getFamilyTree);
+// Update/Delete (Catch-all for IDs)
+router.put("/:personId", verifyAuth, isFamilyMember, updatePerson);
+router.delete("/:personId", verifyAuth, isFamilyMember, deletePerson);
 
 export default router;

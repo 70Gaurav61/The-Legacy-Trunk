@@ -4,24 +4,33 @@ const PersonSchema = new mongoose.Schema({
   family: { type: mongoose.Schema.Types.ObjectId, ref: "Family", required: true },
   name: { type: String, required: true },
   dob: Date,
-  gender: { type: String, enum: ["male","female","other"] },
-  user: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // optional
-  relationTo: { type: mongoose.Schema.Types.ObjectId, ref: "Person" }, // parent or related person
+  gender: { type: String, enum: ["male", "female", "other"] },
+  
+  // Link to the User Account (if they have signed up)
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+
+  // Tree Structure (Child points to Parent)
+  relationTo: { type: mongoose.Schema.Types.ObjectId, ref: "Person" }, 
   relationType: { 
     type: String, 
-    enum: ["father","mother","son","daughter","spouse","sibling","grandfather","grandmother","other","Admin"], 
+    // ✅ FIXED: "Admin" removed. "Spouse" split into specific roles for clearer logic.
+    enum: ["father", "mother", "son", "daughter","spouse", "wife", "husband", "brother", "sister", "other"], 
     default: "other" 
   },
+  
   generation: { type: Number, index: true },
   avatarUrl: String,
   bio: String,
 
-  // 🆕 Added field: store direct children for easy population in tree
-  children: [{ type: mongoose.Schema.Types.ObjectId, ref: "Person" }],  // ✅ NEW FIELD
+  // ✅ ADDED: Essential for the 'Invite/Claim' feature
+  claimCode: { type: String, select: false }, // Hidden by default for security
+  isClaimed: { type: Boolean, default: false }
+
+  // ❌ REMOVED: children: [] (Calculated dynamically via aggregation in controller)
 }, { timestamps: true });
 
 
-// 🧠 Auto-calculate generation (unchanged logic, works fine)
+// 🧠 Auto-calculate generation
 PersonSchema.pre("save", async function (next) {
   if (!this.isModified("relationTo")) return next();
   if (!this.relationTo) {
@@ -32,7 +41,7 @@ PersonSchema.pre("save", async function (next) {
   try {
     const parent = await this.model("Person").findById(this.relationTo);
     if (parent) {
-      if (["father", "mother", "grandfather", "grandmother"].includes(this.relationType)) {
+      if (["father", "mother"].includes(this.relationType)) {
         this.generation = parent.generation - 1;
       } else if (["son", "daughter"].includes(this.relationType)) {
         this.generation = parent.generation + 1;

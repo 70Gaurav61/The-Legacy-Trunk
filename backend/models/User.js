@@ -22,9 +22,16 @@ const UserSchema = new mongoose.Schema({
     required: true
   },
   avatarUrl: String,
+  
+  // Links to the user's specific node in the Family Tree
   primaryPerson: { type: mongoose.Schema.Types.ObjectId, ref: "Person" },
+  
+  // List of all people this user manages (including themselves and unclaimed children)
   persons: [{ type: mongoose.Schema.Types.ObjectId, ref: "Person" }],
+  
+  // List of families this user belongs to
   families: [{ type: mongoose.Schema.Types.ObjectId, ref: "Family" }],
+  
   role: {
     type: String,
     enum: ["member", "creator", "admin"],

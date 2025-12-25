@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 
-
 const MemorySchema = new mongoose.Schema({
   family: { type: mongoose.Schema.Types.ObjectId, ref: "Family", required: true, index: true },
   author: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -9,7 +8,11 @@ const MemorySchema = new mongoose.Schema({
   media: [{ url: String, mimeType: String, size: Number }],
   mediaType: { type: String, enum: ["photo","video","story"], default: "story" },
   date: Date,
-  tags: [String],
+  
+  // ✅ ADDED: Tag specific family members (by ID) in this memory
+  taggedPersons: [{ type: mongoose.Schema.Types.ObjectId, ref: "Person" }], 
+  
+  tags: [String], // Keep this for general tags like "Summer", "Birthday"
   visibility: { type: String, enum: ["family","selected","private"], default: "family" },
   sharedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // used when visibility === selected
   collaborators: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // users allowed to propose edits
