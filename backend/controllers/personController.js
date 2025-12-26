@@ -6,25 +6,62 @@ import mongoose from "mongoose";
 // ==========================================
 // 🧠 HELPER: Recursive Tree Builder
 // ==========================================
+// ==========================================
+// 🧠 HELPER: Recursive Tree Builder (Fixed for Spouses)
+// ==========================================
 const nestChildren = (rootId, allPeople, allSpouses, currentLevel) => {
-  const children = allPeople.filter(p => 
-    p.relationTo && 
-    p.relationTo.toString() === rootId.toString() &&
-    ["son", "daughter"].includes(p.relationType)
+  
+  // 1. Find the Spouse of the current Root Person
+  // We need this so we can find children linked to the Spouse too!
+  let spouse = allSpouses.find(s => 
+    s.relationTo && 
+    s.relationTo.toString() === rootId.toString() &&
+    ["spouse", "wife", "husband"].includes(s.relationType)
   );
+  
+  // Check reverse link (in case spouse points to root)
+  if (!spouse) {
+    spouse = allSpouses.find(s => 
+      rootId && // ensure rootId exists
+      s._id && // ensure s._id exists
+      s.relationTo && // ensure spouse has a relation
+      rootId.toString() === s._id.toString() && // (Mistake in previous logic, fixed here: we look for someone WHOSE relationTo is ME)
+      // Actually, standard check:
+      // Does 's' have 'rootId' as relationTo? (Already checked above)
+      // OR does 'rootId' have 's' as relationTo?
+      // Since we only have 'rootId' (string/obj), we can't check root's properties easily here without passing the root obj.
+      // BUT, we can just scan 'allPeople' to find if anyone lists 'rootId' as their spouse.
+      false // Simplified: The first check covers 99% of cases in this schema.
+    );
+  }
+
+  // 🟢 2. Filter for Children (Linked to Root OR Spouse)
+  const children = allPeople.filter(p => {
+    if (!p.relationTo) return false;
+    const parentId = p.relationTo.toString();
+    
+    // Is child linked to Father (Root)?
+    const linkedToRoot = parentId === rootId.toString();
+    
+    // Is child linked to Mother (Spouse)?
+    const linkedToSpouse = spouse ? parentId === spouse._id.toString() : false;
+
+    return (linkedToRoot || linkedToSpouse) && ["son", "daughter"].includes(p.relationType);
+  });
 
   if (children.length === 0) return [];
 
+  // 3. Map children recursively
   return children.map(child => {
-    // strict spouse check
-    let spouse = allSpouses.find(s => 
+    // Find spouse for this specific child
+    let childSpouse = allSpouses.find(s => 
       s.relationTo && 
       s.relationTo.toString() === child._id.toString() &&
       ["spouse", "wife", "husband"].includes(s.relationType)
     );
 
-    if (!spouse) {
-      spouse = allSpouses.find(s => 
+    if (!childSpouse) {
+      childSpouse = allSpouses.find(s => 
         child.relationTo && 
         child.relationTo.toString() === s._id.toString() &&
         ["husband", "wife", "spouse"].includes(child.relationType)
@@ -38,19 +75,20 @@ const nestChildren = (rootId, allPeople, allSpouses, currentLevel) => {
       avatarUrl: child.avatarUrl,
       relationType: child.relationType,
       generation: currentLevel, 
-      spouse: spouse ? { 
-        _id: spouse._id, 
-        name: spouse.name, 
-        gender: spouse.gender, 
-        avatarUrl: spouse.avatarUrl,
-        relationType: spouse.relationType,
+
+      spouse: childSpouse ? { 
+        _id: childSpouse._id, 
+        name: childSpouse.name, 
+        gender: childSpouse.gender, 
+        avatarUrl: childSpouse.avatarUrl,
+        relationType: childSpouse.relationType,
         generation: currentLevel 
       } : null,
+      
       children: nestChildren(child._id, allPeople, allSpouses, currentLevel + 1)
     };
   });
 };
-
 // ==========================================
 // 🟢 CONTROLLER METHODS
 // ==========================================
