@@ -14,6 +14,7 @@ import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
 import Choose from "./pages/Choose";
 import TreePage from "./pages/TreePage";
+import CreateStory from "./pages/CreateStory";
 
 // 🟢 1. Create a Layout for standard pages (Restores the container look)
 const StandardLayout = () => (
@@ -50,20 +51,16 @@ export default function App() {
             {/* Private Routes */}
             {user && (
               <>
-                {/* 🟢 3. WRAP NORMAL PAGES IN STANDARD LAYOUT */}
-                <Route element={<StandardLayout />}>
-                  <Route path="/home" element={<Home />} />
-                  <Route path="/stories" element={<Stories />} />
-                  <Route path="/stories/:id" element={<StoryDetail />} />
-                  <Route path="/create" element={<Create />} />
-                  <Route path="/timeline" element={<TimelinePage />} />
-                  <Route path="/circles" element={<Circles />} />
-                  <Route path="/choose" element={<Choose />} />
-                  <Route path="/join" element={<Join />} />
-                </Route>
 
-                {/* 🟢 4. KEEP TREE PAGE SEPARATE (Full Width) */}
-                {/* This allows TreePage to stretch 100% edge-to-edge */}
+                <Route path="/home" element={<Home />} />
+                <Route path="/stories" element={<Stories />} />
+                <Route path="/stories/:id" element={<StoryDetail />} />
+                <Route path="/create" element={<Create />} />
+                <Route path="/timeline" element={<TimelinePage />} />
+                <Route path="/circles" element={<Circles />} />
+                <Route path="/choose" element={<Choose />} />
+                <Route path="/join" element={<Join />} />
+                <Route path="/create-story" element={<CreateStory />} />
                 <Route path="/family-tree" element={<TreePage />} />
               </>
             )}
