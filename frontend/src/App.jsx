@@ -15,6 +15,7 @@ import Signup from "./pages/Auth/Signup";
 import Choose from "./pages/Choose";
 import TreePage from "./pages/TreePage";
 import CreateStory from "./pages/CreateStory";
+import PrivateGallery from "./pages/PrivateGallery";
 
 // 🟢 1. Create a Layout for standard pages (Restores the container look)
 const StandardLayout = () => (
@@ -62,6 +63,7 @@ export default function App() {
                 <Route path="/join" element={<Join />} />
                 <Route path="/create-story" element={<CreateStory />} />
                 <Route path="/family-tree" element={<TreePage />} />
+                <Route path="/private" element={<PrivateGallery />} />
               </>
             )}
           </Routes>

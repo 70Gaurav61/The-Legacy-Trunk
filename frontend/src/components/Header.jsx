@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiSearch } from "react-icons/fi";
+import { FiSearch, FiLock } from "react-icons/fi"; // Added FiLock
 import { useAuth } from "../services/useAuth"; 
 
 // 🟢 Import the new Notification Component
@@ -47,9 +47,14 @@ export default function Header() {
             {/* 🔔 🟢 Notification Bell Added Here */}
             <NotificationBell />
 
-            <span className="text-sm font-semibold text-gray-600 hidden md:block border-l pl-4 border-gray-200">
-              My Private Story
-            </span>
+            {/* 🔒 🟢 Functional Private Story Link */}
+            <Link 
+              to="/private"
+              className="hidden md:flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-indigo-600 border-l pl-4 border-gray-200 transition-colors cursor-pointer group"
+            >
+              <FiLock className="text-gray-400 group-hover:text-indigo-600" size={14} />
+              <span>My Private Story</span>
+            </Link>
 
             {/* Profile Avatar */}
             <div className="w-10 h-10 cursor-pointer hover:opacity-80 transition-opacity">

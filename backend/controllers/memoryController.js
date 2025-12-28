@@ -42,20 +42,31 @@ export const createMemory = async (req, res) => {
 
 export const getMemories = async (req, res) => {
   try {
-    const { userId } = req.query;
-    const familyId = req.params.familyId; // Assuming you fixed the route to include :familyId
+    const { userId, visibility } = req.query;
+    const familyId = req.params.familyId; 
 
-    // 1. Base Query: Always filter by Family
+    // 1. Base Query: Always filter by the current Family
     let query = { family: familyId };
 
-    // 2. If a specific User is selected (filtered)
-    if (userId) {
+    // ==================================================
+    // CASE A: PRIVATE GALLERY REQUEST
+    // ==================================================
+    if (visibility === 'private') {
+      // Security: ONLY show private memories if the author is the requester.
+      query.author = req.user._id; 
+      query.visibility = 'private';
+    } 
+    
+    // ==================================================
+    // CASE B: STANDARD FEED (Specific User Filter)
+    // ==================================================
+    else if (userId) {
       
-      // Step A: Find the 'Person ID' linked to this User
+      // Step 1: Find the 'Person ID' linked to this User
       // (Because tags are stored as Person IDs, not User IDs)
       const user = await User.findById(userId);
       
-      let personId = user.primaryPerson;
+      let personId = user?.primaryPerson;
       
       // Fallback: If primaryPerson isn't set, try to find the Person linked to this User
       if (!personId) {
@@ -63,7 +74,7 @@ export const getMemories = async (req, res) => {
         if (linkedPerson) personId = linkedPerson._id;
       }
 
-      // Step B: Create the "OR" logic
+      // Step 2: Create the "OR" logic
       // Show memory IF: (User is the Author) OR (User's Person Profile is Tagged)
       if (personId) {
         query.$or = [
@@ -74,12 +85,29 @@ export const getMemories = async (req, res) => {
         // If we can't find their Person Profile, just show what they uploaded
         query.author = userId;
       }
+
+      // Optional Security: Don't show this user's PRIVATE memories to others
+      if (userId !== req.user._id.toString()) {
+         query.visibility = { $ne: 'private' };
+      }
+    }
+    
+    // ==================================================
+    // CASE C: MAIN FEED (All Family Memories)
+    // ==================================================
+    else {
+      // In the main feed, we generally hide other people's private notes
+      // Show: (Public/Family/Selected) OR (My Private Memories)
+      query.$or = [
+        { visibility: { $ne: 'private' } },
+        { author: req.user._id }
+      ];
     }
 
     // 3. Execute Query with Populate
     const memories = await Memory.find(query)
       .populate("author", "username avatarUrl") // Show Uploader Name
-      .populate("taggedPersons", "name")        // Optional: Show names of tagged people
+      .populate("taggedPersons", "name")        // Show names of tagged people
       .sort({ date: -1 });
 
     res.json(memories);
@@ -87,6 +115,8 @@ export const getMemories = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+
 // Update Memory (Collaborator)
 export const updateMemory = async (req, res) => {
   try {
