@@ -1,22 +1,19 @@
 import Memory from "../models/Memory.js";
 import User from "../models/User.js";
-import Person from "../models/Person.js"; // Import Person model
-// Create Memory
-// In memoryController.js -> createMemory
+import Person from "../models/Person.js"; 
 
 export const createMemory = async (req, res) => {
   try {
     const memoryData = {
       ...req.body,
       author: req.user._id,
-      family: req.params.familyId, // 🟢 Matches route parameter
+      family: req.params.familyId, 
       date: req.body.date || new Date(),
     };
 
-    // 🟢 FIX: Handle Array of Files (because route uses upload.array)
     if (req.files && req.files.length > 0) {
       memoryData.media = req.files.map(file => ({
-        url: file.location, // Assuming S3/Multer-S3
+        url: file.location, 
         mimeType: file.mimetype,
         size: file.size,
       }));
@@ -29,85 +26,113 @@ export const createMemory = async (req, res) => {
   }
 };
 
-// Get all memories in a family
-// export const getMemories = async (req, res) => {
-//   try {
-//     const memories = await Memory.find({ family: req.family._id });
-//     res.json(memories);
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// };
-// REPLACE your existing getMemories in memoryController.js with this:
-
 export const getMemories = async (req, res) => {
   try {
-    const { userId, visibility } = req.query;
+    const { userId, visibility, search } = req.query;
     const familyId = req.params.familyId; 
 
-    // 1. Base Query: Always filter by the current Family
+    // Base Query
     let query = { family: familyId };
 
-    // ==================================================
-    // CASE A: PRIVATE GALLERY REQUEST
-    // ==================================================
+    // ---------------------------------------------------------
+    // 1. HANDLE SEARCH (Global Text Search)
+    // ---------------------------------------------------------
+    if (search) {
+      const searchRegex = new RegExp(search, 'i'); 
+
+      const matchingUsers = await User.find({ username: searchRegex }).select('_id');
+      const matchingUserIds = matchingUsers.map(u => u._id);
+
+      const matchingPersons = await Person.find({ name: searchRegex, family: familyId }).select('_id');
+      const matchingPersonIds = matchingPersons.map(p => p._id);
+
+      const isDate = !isNaN(Date.parse(search));
+      let dateQuery = {};
+      if (isDate) {
+        const start = new Date(search);
+        const end = new Date(search);
+        end.setDate(end.getDate() + 1);
+        dateQuery = { date: { $gte: start, $lt: end } };
+      }
+
+      query.$or = [
+        { title: searchRegex },              
+        { description: searchRegex },        
+        { tags: searchRegex },               
+        { author: { $in: matchingUserIds } }, 
+        { taggedPersons: { $in: matchingPersonIds } }, 
+        ...(isDate ? [dateQuery] : [])       
+      ];
+    }
+
+    // ---------------------------------------------------------
+    // 2. HANDLE FILTERS (User Click / Private / Default)
+    // ---------------------------------------------------------
+    
+    // CASE A: Private Gallery
     if (visibility === 'private') {
-      // Security: ONLY show private memories if the author is the requester.
       query.author = req.user._id; 
       query.visibility = 'private';
     } 
     
-    // ==================================================
-    // CASE B: STANDARD FEED (Specific User Filter)
-    // ==================================================
+    // CASE B: User Clicked in StoriesRail (🟢 MISSING LOGIC RESTORED HERE)
     else if (userId) {
-      
       // Step 1: Find the 'Person ID' linked to this User
-      // (Because tags are stored as Person IDs, not User IDs)
       const user = await User.findById(userId);
-      
       let personId = user?.primaryPerson;
       
-      // Fallback: If primaryPerson isn't set, try to find the Person linked to this User
       if (!personId) {
         const linkedPerson = await Person.findOne({ user: userId });
         if (linkedPerson) personId = linkedPerson._id;
       }
 
-      // Step 2: Create the "OR" logic
-      // Show memory IF: (User is the Author) OR (User's Person Profile is Tagged)
+      // Step 2: Show memories where User is Author OR Tagged
       if (personId) {
-        query.$or = [
-          { author: userId },          // Did they upload it?
-          { taggedPersons: personId }  // Are they tagged in it?
-        ];
+        // If we are ALSO searching, we need to use $and to combine the Search $or with this Filter $or
+        const userFilter = {
+             $or: [
+               { author: userId },
+               { taggedPersons: personId }
+             ]
+        };
+
+        if (search) {
+            query.$and = [ userFilter ];
+        } else {
+            query.$or = userFilter.$or;
+        }
       } else {
-        // If we can't find their Person Profile, just show what they uploaded
         query.author = userId;
       }
-
-      // Optional Security: Don't show this user's PRIVATE memories to others
+      
+      // Optional: Hide private memories of others in this view
       if (userId !== req.user._id.toString()) {
-         query.visibility = { $ne: 'private' };
+          // If we already have a query.$and (from search), push to it
+          const privacyFilter = { visibility: { $ne: 'private' } };
+          if(query.$and) {
+              query.$and.push(privacyFilter);
+          } else {
+              query.visibility = { $ne: 'private' };
+          }
       }
-    }
+    } 
     
-    // ==================================================
-    // CASE C: MAIN FEED (All Family Memories)
-    // ==================================================
-    else {
-      // In the main feed, we generally hide other people's private notes
-      // Show: (Public/Family/Selected) OR (My Private Memories)
-      query.$or = [
-        { visibility: { $ne: 'private' } },
-        { author: req.user._id }
+    // CASE C: Default Feed (No specific user selected)
+    else if (!search) {
+      // Show (Public/Family) OR (My Private)
+      query.$and = [
+        {
+          $or: [
+            { visibility: { $ne: 'private' } },
+            { author: req.user._id }
+          ]
+        }
       ];
     }
 
-    // 3. Execute Query with Populate
     const memories = await Memory.find(query)
-      .populate("author", "username avatarUrl") // Show Uploader Name
-      .populate("taggedPersons", "name")        // Show names of tagged people
+      .populate("author", "username avatarUrl")
+      .populate("taggedPersons", "name")
       .sort({ date: -1 });
 
     res.json(memories);
@@ -116,8 +141,6 @@ export const getMemories = async (req, res) => {
   }
 };
 
-
-// Update Memory (Collaborator)
 export const updateMemory = async (req, res) => {
   try {
     Object.assign(req.memory, req.body);
@@ -128,7 +151,6 @@ export const updateMemory = async (req, res) => {
   }
 };
 
-// Delete Memory
 export const deleteMemory = async (req, res) => {
   try {
     await req.memory.remove();
