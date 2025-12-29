@@ -1,16 +1,19 @@
 import Memory from "../models/Memory.js";
 import User from "../models/User.js";
-import Person from "../models/Person.js"; 
+import Person from "../models/Person.js";
+import { createNotification } from "../utiles/notificationService.js"; // 🟢 Import helper
 
 export const createMemory = async (req, res) => {
   try {
+    // 1. Setup Memory Data
     const memoryData = {
       ...req.body,
       author: req.user._id,
-      family: req.params.familyId, 
+      family: req.params.familyId,
       date: req.body.date || new Date(),
     };
 
+    // Handle Files (Media)
     if (req.files && req.files.length > 0) {
       memoryData.media = req.files.map(file => ({
         url: file.location, 
@@ -19,12 +22,75 @@ export const createMemory = async (req, res) => {
       }));
     }
 
+    // 2. Save to Database
     const memory = await Memory.create(memoryData);
+
+    // ========================================================
+    // 🔔 NOTIFICATION LOGIC START
+    // ========================================================
+    
+    // A. HANDLE TAGGED PERSONS (Specific Alert)
+    // --------------------------------------------------------
+    let taggedUserIds = []; // Keep track so we don't notify them twice
+
+    if (req.body.taggedPersons && req.body.taggedPersons.length > 0) {
+      // Find the Person documents to get their linked User IDs
+      const taggedPeople = await Person.find({ 
+        _id: { $in: req.body.taggedPersons } 
+      });
+
+      for (const person of taggedPeople) {
+        if (person.user) { // Only notify if linked to a real User
+          taggedUserIds.push(person.user.toString()); // Add to tracking list
+
+          await createNotification({
+            recipient: person.user,
+            sender: req.user._id,
+            type: 'memory_tag',
+            payload: {
+              memoryId: memory._id,
+              message: `${req.user.username} tagged you in a memory: "${memory.title || 'Untitled'}"`
+            }
+          });
+        }
+      }
+    }
+
+    // B. HANDLE FAMILY BROADCAST (General Alert)
+    // --------------------------------------------------------
+    // Find all users in this family
+    const familyMembers = await User.find({ families: req.params.familyId });
+
+    for (const member of familyMembers) {
+      const memberId = member._id.toString();
+
+      // Rules for Broadcast:
+      // 1. Don't notify the Author (yourself)
+      // 2. Don't notify people we ALREADY notified via Tags (optional, but cleaner)
+      if (memberId !== req.user._id.toString() && !taggedUserIds.includes(memberId)) {
+        
+        await createNotification({
+          recipient: memberId,
+          sender: req.user._id,
+          type: 'memory_create',
+          payload: {
+            memoryId: memory._id,
+            message: `${req.user.username} added a new memory to the family album.`
+          }
+        });
+
+      }
+    }
+    // ========================================================
+    // 🔔 NOTIFICATION LOGIC END
+    // ========================================================
+
     res.status(201).json(memory);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 };
+
 
 export const getMemories = async (req, res) => {
   try {

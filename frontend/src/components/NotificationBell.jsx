@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FiBell, FiCheck } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import { api } from "../services/useAuth"; // Your Axios instance
+import { api } from "../services/useAuth"; 
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState([]);
@@ -12,7 +12,6 @@ export default function NotificationBell() {
   // 1. Fetch Notifications
   const fetchNotifications = async () => {
     try {
-      // Calls notificationController.getNotifications
       const res = await api.get("/notifications"); 
       setNotifications(res.data);
     } catch (err) {
@@ -20,7 +19,7 @@ export default function NotificationBell() {
     }
   };
 
-  // 2. Initial Load + Auto-Poll every 60 seconds
+  // 2. Initial Load + Auto-Poll
   useEffect(() => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 60000);
@@ -41,28 +40,39 @@ export default function NotificationBell() {
   // 4. Handle Click on Notification
   const handleNotificationClick = async (notif) => {
     try {
-      // Mark as read in backend
       if (!notif.read) {
         await api.put(`/notifications/${notif._id}/read`);
-        
-        // Update local state to reflect 'read' status instantly
         setNotifications(prev => 
           prev.map(n => n._id === notif._id ? { ...n, read: true } : n)
         );
       }
 
-      // Navigate based on type
-      // You can expand this switch case based on your payload types
       setIsOpen(false);
-      if (notif.type === 'memory_tag' || notif.type === 'new_memory') {
-        // Assuming payload contains { memoryId: '...' }
-        navigate(`/memory/${notif.payload?.memoryId}`); 
+      
+      // Navigate Logic
+      if (notif.type === 'memory_tag' || notif.type === 'new_memory' || notif.type === 'memory_create') {
+        navigate(`/stories/${notif.payload?.memoryId}`); 
       } else if (notif.type === 'family_invite') {
         navigate('/family-tree');
       }
-
     } catch (err) {
       console.error("Action failed", err);
+    }
+  };
+
+  // 🟢 5. NEW FUNCTION: Mark All Read
+  const handleMarkAllRead = async (e) => {
+    e.stopPropagation(); // Prevent closing the dropdown immediately
+    try {
+      // Optimistically update UI (Instant feel)
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+      // Call Backend
+      await api.put("/notifications/read-all");
+    } catch (err) {
+      console.error("Failed to mark all read", err);
+      // Ideally re-fetch if it fails, but for read status it's usually fine
+      fetchNotifications();
     }
   };
 
@@ -78,8 +88,6 @@ export default function NotificationBell() {
         className="relative p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors focus:outline-none"
       >
         <FiBell size={24} />
-        
-        {/* 🔴 RED BADGE COUNT */}
         {unreadCount > 0 && (
           <span className="absolute top-0 right-0 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 border-2 border-white rounded-full">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -94,7 +102,11 @@ export default function NotificationBell() {
           <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
             <h3 className="font-bold text-gray-700">Notifications</h3>
             {unreadCount > 0 && (
-              <span className="text-xs text-indigo-600 font-semibold cursor-pointer hover:underline" onClick={() => {/* function to mark all read */}}>
+              // 🟢 ATTACHED FUNCTION HERE
+              <span 
+                className="text-xs text-indigo-600 font-semibold cursor-pointer hover:underline hover:text-indigo-800 transition-colors" 
+                onClick={handleMarkAllRead}
+              >
                 Mark all read
               </span>
             )}
@@ -121,9 +133,6 @@ export default function NotificationBell() {
 
                   <div className="flex-1">
                     <p className={`text-sm ${notif.read ? 'text-gray-600' : 'text-gray-900 font-semibold'}`}>
-                      {/* We assume your notification.payload has a 'message' or you build it here.
-                         Example: "Uncle Bob tagged you in a photo" 
-                      */}
                       {notif.payload?.message || "New activity in your family tree"}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
