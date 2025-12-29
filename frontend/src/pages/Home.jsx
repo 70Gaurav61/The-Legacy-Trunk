@@ -74,11 +74,6 @@ export default function Home() {
             ? `/memories/${activeFamilyId}?${queryString}` 
             : `/memories/${activeFamilyId}`;
 
-        // 🟢 DEBUG LOG
-        console.log("--------------------------------------");
-        console.log("🔍 Search Term detected:", searchTerm);
-        console.log("🚀 Requesting Backend URL:", url);
-        console.log("--------------------------------------");
 
         const res = await api.get(url); 
         setMemories(res.data);

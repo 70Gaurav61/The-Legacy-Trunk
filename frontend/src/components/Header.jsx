@@ -28,7 +28,6 @@ export default function Header() {
   const handleSearch = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault(); 
-      console.log("⌨️ Enter Key Pressed! Navigating to:", searchTerm);
 
       if (searchTerm.trim()) {
         // 🟢 FIX: Navigate to '/home', not '/'
