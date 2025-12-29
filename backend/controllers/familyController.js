@@ -1,13 +1,14 @@
 import Family from "../models/Family.js";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+// 🟢 Import Notification Service
+import { createNotification } from "../utiles/notificationService.js"; 
 
-// 🟢 Create Family
+// 🟢 Create Family (No changes needed, but good to keep structure)
 export const createFamily = async (req, res) => {
   try {
     const { name, password } = req.body;
     
-    // Create the family document
     const family = await Family.create({
       name,
       password,
@@ -15,8 +16,6 @@ export const createFamily = async (req, res) => {
       members: [req.user._id],
     });
 
-    // Add this family ID to the User's list
-    // (Using $addToSet ensures no duplicates, though unnecessary here on create)
     await User.findByIdAndUpdate(req.user._id, {
       $addToSet: { families: family._id }
     });
@@ -27,7 +26,7 @@ export const createFamily = async (req, res) => {
   }
 };
 
-// 🟢 Join Family (Step 2 of Workflow)
+// 🟢 Join Family (UPDATED WITH NOTIFICATION)
 export const joinFamily = async (req, res) => {
   try {
     const { familyCode, password } = req.body;
@@ -41,7 +40,6 @@ export const joinFamily = async (req, res) => {
     if (!isMatch) return res.status(400).json({ message: "Invalid password" });
 
     // 3. Add User to Family Members (if not already there)
-    // We use $addToSet which handles the "includes" check natively in MongoDB
     await Family.findByIdAndUpdate(family._id, {
       $addToSet: { members: req.user._id }
     });
@@ -51,28 +49,50 @@ export const joinFamily = async (req, res) => {
       $addToSet: { families: family._id }
     });
 
+    // ========================================================
+    // 🔔 NOTIFICATION LOGIC: USER JOINED VIA CODE
+    // ========================================================
+    // 'family.members' currently holds the list of members BEFORE this user joined.
+    // This is perfect because we want to notify THEM, not the new user.
+    
+    for (const memberId of family.members) {
+      // Safety check: ensure we don't notify the user themselves (if they rejoined)
+      if (memberId.toString() !== req.user._id.toString()) {
+        
+        await createNotification({
+          recipient: memberId,
+          sender: req.user._id,
+          type: 'new_member', // Reuse the same type as the Claim logic
+          payload: {
+            // We link to the Family ID since they might not have a Person Profile yet
+            familyId: family._id, 
+            message: `${req.user.username} joined the family! Say hello. 👋`
+          }
+        });
+        
+      }
+    }
+    // ========================================================
+
     res.json({ message: "Joined family successfully", family });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// 🟢 Get Family Members
+// 🟢 Get Family Members (No changes)
 export const getMembers = async (req, res) => {
   try {
-    // We assume 'req.family' is set by middleware (e.g., checkFamilyAccess)
     if (!req.family) {
       return res.status(400).json({ message: "Family context missing" });
     }
 
-    // Populate members AND their linked Person profile (primaryPerson)
-    // This lets the frontend show "Arthur Weasley" instead of just "user_arthur"
     await req.family.populate({
       path: "members",
-      select: "username email avatarUrl primaryPerson", // Select specific user fields
+      select: "username email avatarUrl primaryPerson", 
       populate: {
         path: "primaryPerson",
-        select: "name avatarUrl relationType" // Get the real name from the Person model
+        select: "name avatarUrl relationType" 
       }
     });
 

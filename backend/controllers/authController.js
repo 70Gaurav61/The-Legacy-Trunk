@@ -1,7 +1,9 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import Person from "../models/Person.js";
-import Family from "../models/Family.js"; // 🟢 IMPORT ADDED
+import Family from "../models/Family.js"; 
+// 🟢 IMPORT NOTIFICATION SERVICE
+import { createNotification } from "../utiles/notificationService.js"; 
 
 const sanitizeUser = (user) => {
   if (!user) return null;
@@ -17,7 +19,7 @@ const cookieOptions = () => ({
   maxAge: 7 * 24 * 60 * 60 * 1000,
 });
 
-// 🟢 1. Standard Register
+// 1. Standard Register (No changes)
 export const register = async (req, res) => {
   try {
     const { username, email, password, confirmPassword } = req.body;
@@ -44,7 +46,7 @@ export const register = async (req, res) => {
   }
 };
 
-// 🟢 2. Register via Claim Code (FIXED & COMPLETE)
+// 🟢 2. Register via Claim Code (WITH NOTIFICATION)
 export const registerAndClaim = async (req, res) => {
   const { username, email, password, claimCode } = req.body;
 
@@ -59,7 +61,6 @@ export const registerAndClaim = async (req, res) => {
     if (!person) return res.status(404).json({ message: "Invalid claim code" });
     if (person.isClaimed) return res.status(400).json({ message: "Profile already claimed" });
     
-    // Check for Family Link
     if (!person.family) {
         return res.status(500).json({ message: "Error: This profile is not linked to any family tree." });
     }
@@ -72,8 +73,7 @@ export const registerAndClaim = async (req, res) => {
     user.persons = [person._id]; 
     user.families = [person.family]; 
 
-    // 🟢 4. CRITICAL FIX: Add User to the Family's 'members' list
-    // This ensures middleware like 'isFamilyMember' works correctly.
+    // 4. Add User to the Family's 'members' list
     await Family.findByIdAndUpdate(person.family, {
         $addToSet: { members: user._id } 
     });
@@ -87,6 +87,28 @@ export const registerAndClaim = async (req, res) => {
     await user.save();
     await person.save();
 
+    // ========================================================
+    // 🔔 NOTIFICATION LOGIC: NEW MEMBER JOINED
+    // ========================================================
+    // Find all OTHER users in this family
+    const familyMembers = await User.find({ 
+      families: person.family,
+      _id: { $ne: user._id } // Don't notify the new user themselves
+    });
+
+    for (const member of familyMembers) {
+      await createNotification({
+        recipient: member._id,
+        sender: user._id,
+        type: 'new_member', // Triggers "Welcome" logic on frontend
+        payload: {
+          personId: person._id,
+          message: `${person.name} has joined the Family! Say hello. 👋`
+        }
+      });
+    }
+    // ========================================================
+
     // 7. Generate Token & Respond
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
     res.cookie("token", token, cookieOptions());
@@ -98,6 +120,7 @@ export const registerAndClaim = async (req, res) => {
   }
 };
 
+// ... (Rest of your controller: login, logout, me, checkUsername) ...
 export const login = async (req, res) => {
   try {
     const { username, email, password } = req.body;
