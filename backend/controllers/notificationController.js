@@ -13,10 +13,12 @@ export const getNotifications = async (req, res) => {
 // Mark notification as read
 export const markAsRead = async (req, res) => {
   try {
-    const notification = await Notification.findById(req.params.notificationId);
-    if (!notification) return res.status(404).json({ message: "Notification not found" });
+    const notification = await Notification.findById(req.params.id);
+    if (!notification) return res.status(404).json({ message: "Not found" });
 
     notification.read = true;
+    notification.readAt = new Date(); // 🟢 Start the 30-day countdown NOW
+    
     await notification.save();
     res.json(notification);
   } catch (err) {
@@ -26,13 +28,16 @@ export const markAsRead = async (req, res) => {
 
 export const markAllRead = async (req, res) => {
   try {
-    // Update all notifications where 'user' is current user and 'read' is false
     await Notification.updateMany(
       { user: req.user._id, read: false },
-      { $set: { read: true } }
+      { 
+        $set: { 
+          read: true, 
+          readAt: new Date() // 🟢 Start the countdown for all of them
+        } 
+      }
     );
-    
-    res.json({ message: "All notifications marked as read" });
+    res.json({ message: "All marked as read" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

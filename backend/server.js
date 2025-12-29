@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import { connectDB } from "./config/db.js";
 import routes from "./routes/index.js"; // Main router
 import { errorHandler } from "./middlewares/error/errorHandler.js";
+import { startCronJobs } from "./utiles/cronService.js";
 
 // Load environment variables
 dotenv.config();
@@ -57,6 +58,10 @@ app.use((req, res) => {
 
 // -------------------- Global Error Handler -------------------- //
 app.use(errorHandler); // catch all errors
+
+
+// 🟢 Start the Scheduler
+startCronJobs();
 
 // -------------------- Start Server -------------------- //
 const PORT = process.env.PORT || 5000;

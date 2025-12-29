@@ -50,9 +50,18 @@ export default function NotificationBell() {
       setIsOpen(false);
       
       // Navigate Logic
-      if (notif.type === 'memory_tag' || notif.type === 'new_memory' || notif.type === 'memory_create') {
+      // Inside handleNotificationClick...
+  
+      // Inside handleNotificationClick in NotificationBell.jsx
+
+      if (notif.type === 'memory_tag' || notif.type === 'new_memory' || notif.type === 'on_this_day') {
         navigate(`/stories/${notif.payload?.memoryId}`); 
-      } else if (notif.type === 'family_invite') {
+      } 
+      // 🟢 Add this case
+      else if (notif.type === 'birthday_alert') {
+        navigate('/family-tree'); // Or /timeline
+      }
+      else if (notif.type === 'family_invite') {
         navigate('/family-tree');
       }
     } catch (err) {
