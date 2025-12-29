@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FiBell, FiCheck } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import { api } from "../services/useAuth"; 
+import { api } from "../services/useAuth";
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState([]);
@@ -12,7 +12,7 @@ export default function NotificationBell() {
   // 1. Fetch Notifications
   const fetchNotifications = async () => {
     try {
-      const res = await api.get("/notifications"); 
+      const res = await api.get("/notifications");
       setNotifications(res.data);
     } catch (err) {
       console.error("Failed to load notifications", err);
@@ -42,26 +42,23 @@ export default function NotificationBell() {
     try {
       if (!notif.read) {
         await api.put(`/notifications/${notif._id}/read`);
-        setNotifications(prev => 
+        setNotifications(prev =>
           prev.map(n => n._id === notif._id ? { ...n, read: true } : n)
         );
       }
 
       setIsOpen(false);
-      
+
       // Navigate Logic
       // Inside handleNotificationClick...
-  
+
       // Inside handleNotificationClick in NotificationBell.jsx
 
       if (notif.type === 'memory_tag' || notif.type === 'new_memory' || notif.type === 'on_this_day') {
-        navigate(`/stories/${notif.payload?.memoryId}`); 
-      } 
-      // 🟢 Add this case
-      else if (notif.type === 'birthday_alert') {
-        navigate('/family-tree'); // Or /timeline
+        navigate(`/stories/${notif.payload?.memoryId}`);
       }
-      else if (notif.type === 'family_invite') {
+      // 🟢 ADD THIS NEW CASE:
+      else if (notif.type === 'tree_update' || notif.type === 'family_invite' || notif.type === 'birthday_alert') {
         navigate('/family-tree');
       }
     } catch (err) {
@@ -90,9 +87,9 @@ export default function NotificationBell() {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      
+
       {/* 🔔 BELL ICON */}
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors focus:outline-none"
       >
@@ -107,13 +104,13 @@ export default function NotificationBell() {
       {/* 📜 DROPDOWN LIST */}
       {isOpen && (
         <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-fadeIn origin-top-right">
-          
+
           <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
             <h3 className="font-bold text-gray-700">Notifications</h3>
             {unreadCount > 0 && (
               // 🟢 ATTACHED FUNCTION HERE
-              <span 
-                className="text-xs text-indigo-600 font-semibold cursor-pointer hover:underline hover:text-indigo-800 transition-colors" 
+              <span
+                className="text-xs text-indigo-600 font-semibold cursor-pointer hover:underline hover:text-indigo-800 transition-colors"
                 onClick={handleMarkAllRead}
               >
                 Mark all read
@@ -128,12 +125,11 @@ export default function NotificationBell() {
               </div>
             ) : (
               notifications.map((notif) => (
-                <div 
+                <div
                   key={notif._id}
                   onClick={() => handleNotificationClick(notif)}
-                  className={`p-4 border-b border-gray-50 cursor-pointer transition-colors flex gap-3 ${
-                    notif.read ? 'bg-white hover:bg-gray-50' : 'bg-blue-50/50 hover:bg-blue-50'
-                  }`}
+                  className={`p-4 border-b border-gray-50 cursor-pointer transition-colors flex gap-3 ${notif.read ? 'bg-white hover:bg-gray-50' : 'bg-blue-50/50 hover:bg-blue-50'
+                    }`}
                 >
                   {/* Indicator Dot for Unread */}
                   {!notif.read && (
