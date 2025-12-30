@@ -1,5 +1,5 @@
 import express from "express";
-import { createMemory, getMemories, updateMemory, deleteMemory } from "../controllers/memoryController.js";
+import { createMemory, getMemories, updateMemory, deleteMemory, getMemoryById } from "../controllers/memoryController.js";
 import { addMemoryVersion, getMemoryVersions } from "../controllers/memoryVersionController.js";
 import { verifyAuth } from "../middlewares/auth/verifyAuth.js";
 import { isFamilyMember } from "../middlewares/access/isFamilyMember.js";
@@ -7,6 +7,9 @@ import { isCollaborator } from "../middlewares/access/isCollaborator.js";
 import { upload } from "../middlewares/files/uploadMiddleware.js";
 
 const router = express.Router();
+
+
+router.get("/detail/:id", verifyAuth, getMemoryById);
 
 // Memory CRUD
 router.post("/:familyId", verifyAuth, isFamilyMember, upload.array("media", 5), createMemory);

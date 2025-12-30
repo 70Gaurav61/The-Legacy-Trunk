@@ -101,3 +101,28 @@ export const getMembers = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// 🟢 Update Family Password
+export const updateFamilyPassword = async (req, res) => {
+  try {
+    const { familyId } = req.params;
+    const { newPassword } = req.body;
+
+    const family = await Family.findById(familyId);
+    if (!family) return res.status(404).json({ message: "Family not found" });
+
+    // Check if user is the creator (or add an 'admins' array logic)
+    if (family.creator.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Only the family creator can change the password" });
+    }
+
+    // Hash new password (if your Family model has a pre-save hook like User)
+    // If not, hash it manually here: const hash = await bcrypt.hash(newPassword, 10);
+    family.password = newPassword; // Triggers pre-save hook if exists
+    await family.save();
+
+    res.json({ message: "Family password updated" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

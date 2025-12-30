@@ -1,6 +1,8 @@
 import Memory from "../models/Memory.js";
 import User from "../models/User.js";
 import Person from "../models/Person.js";
+import MemoryVersion from "../models/MemoryVersion.js"; // 🟢 MAKE SURE THIS IS IMPORTED
+
 import { createNotification } from "../utiles/notificationService.js"; // 🟢 Import helper
 
 export const createMemory = async (req, res) => {
@@ -217,11 +219,56 @@ export const updateMemory = async (req, res) => {
   }
 };
 
-export const deleteMemory = async (req, res) => {
+
+export const getMemoryById = async (req, res) => {
   try {
-    await req.memory.remove();
-    res.json({ message: "Memory deleted" });
+    const memory = await Memory.findById(req.params.id)
+      .populate("author", "username avatarUrl") // Get author details
+      .populate("taggedPersons", "name avatarUrl"); // Get tagged people details
+
+    if (!memory) return res.status(404).json({ message: "Memory not found" });
+
+    res.json(memory);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+export const deleteMemory = async (req, res) => {
+  try {
+    const { memoryId } = req.params;
+
+    // 1. Find the memory first
+    const memory = await Memory.findById(memoryId);
+    if (!memory) {
+      return res.status(404).json({ message: "Memory not found" });
+    }
+
+    // 2. Check Permissions (Double check: Only Author can delete)
+    // Even if isCollaborator checked this, it's safer to check ownership here for deletion
+    if (memory.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "You are not authorized to delete this memory." });
+    }
+
+    // 3. (Optional) Delete Media Files Logic
+    // If you are using Cloudinary, you would delete images here.
+    // We will skip this for now to fix the 500 error. 
+    // MongoDB will just delete the record, and the image URL will become dead (which is fine for now).
+
+    // 4. Delete the Memory Document
+    await Memory.findByIdAndDelete(memoryId);
+
+    // 5. Clean up: Delete the 'Edit History' (Versions) for this memory
+    // If you don't import MemoryVersion at the top, this line would cause a 500 crash!
+    await MemoryVersion.deleteMany({ memory: memoryId });
+
+    res.json({ message: "Memory deleted successfully" });
+
+  } catch (err) {
+    // 🟢 THIS LOG IS CRITICAL
+    console.error("❌ Delete Memory Error:", err); 
+    res.status(500).json({ message: "Server error during deletion: " + err.message });
   }
 };

@@ -6,6 +6,7 @@ import memoryRoutes from "./memoryRoutes.js";
 import scheduledMessageRoutes from "./scheduledMessageRoutes.js";
 import storageRoutes from "./storageRoutes.js";
 import notificationRoutes from "./notificationRoutes.js";
+import userRoutes from "./userRoutes.js";
 
 const router = express.Router();
 
@@ -16,5 +17,6 @@ router.use("/memories", memoryRoutes);
 router.use("/scheduled-messages", scheduledMessageRoutes);
 router.use("/storage", storageRoutes);
 router.use("/notifications", notificationRoutes);
+router.use("/users", userRoutes);
 
 export default router;

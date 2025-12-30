@@ -6,7 +6,6 @@ import Header from "./components/Header";
 import Home from "./pages/Home";
 import Join from "./pages/Join";
 import Stories from "./pages/Stories";
-import StoryDetail from "./pages/StoryDetail";
 import Create from "./pages/Create";
 import TimelinePage from "./pages/TimelinePage";
 import Circles from "./pages/Circles";
@@ -16,6 +15,9 @@ import Choose from "./pages/Choose";
 import TreePage from "./pages/TreePage";
 import CreateStory from "./pages/CreateStory";
 import PrivateGallery from "./pages/PrivateGallery";
+import StoryView from "./pages/StoryView";
+import Profile from "./pages/Profile";
+import Vault from "./components/Vault";
 
 // 🟢 1. Create a Layout for standard pages (Restores the container look)
 const StandardLayout = () => (
@@ -52,10 +54,10 @@ export default function App() {
             {/* Private Routes */}
             {user && (
               <>
-
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/profile/:id" element={<Profile />} />
                 <Route path="/home" element={<Home />} />
                 <Route path="/stories" element={<Stories />} />
-                <Route path="/stories/:id" element={<StoryDetail />} />
                 <Route path="/create" element={<Create />} />
                 <Route path="/timeline" element={<TimelinePage />} />
                 <Route path="/circles" element={<Circles />} />
@@ -64,6 +66,8 @@ export default function App() {
                 <Route path="/create-story" element={<CreateStory />} />
                 <Route path="/family-tree" element={<TreePage />} />
                 <Route path="/private" element={<PrivateGallery />} />
+                <Route path="/stories/:id" element={<StoryView />} />
+                <Route path="/vault" element={<Vault />} />
               </>
             )}
           </Routes>
