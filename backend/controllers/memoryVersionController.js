@@ -1,26 +1,15 @@
 import MemoryVersion from "../models/MemoryVersion.js";
 
-// Add a new version
-export const addMemoryVersion = async (req, res) => {
-  try {
-    const version = await MemoryVersion.create({
-      ...req.body,
-      memory: req.memory._id,
-      editor: req.user._id,
-    });
-    req.memory.versions.push(version._id);
-    req.memory.currentVersion = version.versionNumber;
-    await req.memory.save();
-    res.status(201).json(version);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// Get all versions
+// 🟢 Get all versions for a specific memory
 export const getMemoryVersions = async (req, res) => {
   try {
-    const versions = await MemoryVersion.find({ memory: req.memory._id });
+    const memoryId = req.params.memoryId || (req.memory && req.memory._id);
+    if (!memoryId) return res.status(400).json({ message: "Memory ID required" });
+
+    const versions = await MemoryVersion.find({ memory: memoryId })
+      .populate("editor", "username avatarUrl") // 🔴 FIX: Populate 'editor', not 'editedBy'
+      .sort({ createdAt: -1 });
+
     res.json(versions);
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -67,6 +67,7 @@ export default function App() {
                 <Route path="/family-tree" element={<TreePage />} />
                 <Route path="/private" element={<PrivateGallery />} />
                 <Route path="/stories/:id" element={<StoryView />} />
+                <Route path="/stories/:id/edit" element={<StoryView initialEditMode={true} />} />
                 <Route path="/vault" element={<Vault />} />
               </>
             )}

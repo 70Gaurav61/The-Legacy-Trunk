@@ -41,7 +41,7 @@ export default function ConfirmModal({ isOpen, onClose, onConfirm, title, messag
             onClick={onConfirm}
             className="px-4 py-2 rounded-lg text-sm font-bold text-white bg-red-600 hover:bg-red-700 shadow-md transition-transform active:scale-95"
           >
-            Yes, Delete It
+            Yes
           </button>
         </div>
 
