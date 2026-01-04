@@ -30,9 +30,7 @@ export const createMemory = async (req, res) => {
     // 2. Save to Database
     const memory = await Memory.create(memoryData);
 
-    // 3. Trigger Notifications (Async - don't block response)
-    // We pass the memory and user to a helper logic block below or keep it here
-    // For clarity/speed, I kept the logic here but cleaner
+    // 3. Trigger Notifications (Async)
     sendMemoryNotifications(req, memory, req.family._id);
 
     res.status(201).json(memory);
@@ -43,7 +41,6 @@ export const createMemory = async (req, res) => {
 
 // ========================================================
 // 🟢 READ MEMORIES (Feed/Search)
-// Logic remains mostly same as it handles complex filtering
 // ========================================================
 export const getMemories = async (req, res) => {
   try {
@@ -84,7 +81,6 @@ export const getMemories = async (req, res) => {
       query.visibility = 'private';
     } 
     else if (userId) {
-      // Find Person ID logic...
       let personId;
       const targetUser = await User.findById(userId).select('primaryPerson');
       if (targetUser?.primaryPerson) {
@@ -98,20 +94,17 @@ export const getMemories = async (req, res) => {
         ? { $or: [{ author: userId }, { taggedPersons: personId }] }
         : { author: userId };
 
-      // Combine with existing Search Query ($and)
       if (query.$or) {
         query = { $and: [query, userFilter] };
       } else {
         Object.assign(query, userFilter);
       }
       
-      // Hide private items if viewing someone else
       if (userId !== req.user._id.toString()) {
         query.visibility = { $ne: 'private' };
       }
     } 
     else if (!search) {
-      // Default Feed: Public items OR My Private items
       query.$and = [{
         $or: [
           { visibility: { $ne: 'private' } },
@@ -122,7 +115,8 @@ export const getMemories = async (req, res) => {
 
     const memories = await Memory.find(query)
       .populate("author", "username avatarUrl")
-      .populate("taggedPersons", "name")
+      // 🟢 CRITICAL FIX: Add "user" so frontend knows who is tagged
+      .populate("taggedPersons", "name user") 
       .sort({ date: -1 });
 
     res.json(memories);
@@ -138,7 +132,8 @@ export const getMemoryById = async (req, res) => {
   try {
     const memory = await Memory.findById(req.params.id)
       .populate("author", "username avatarUrl")
-      .populate("taggedPersons", "name avatarUrl");
+      // 🟢 CRITICAL FIX: Add "user" so frontend knows who is tagged
+      .populate("taggedPersons", "name avatarUrl user");
 
     if (!memory) return res.status(404).json({ message: "Memory not found" });
 
@@ -149,56 +144,100 @@ export const getMemoryById = async (req, res) => {
 };
 
 // ========================================================
-// 🟢 UPDATE MEMORY
-// Optimized: Uses req.memory from 'isCollaborator' middleware
+// 🟢 UPDATE MEMORY (With Notifications)
 // ========================================================
-// backend/controllers/memoryController.js
 
 export const updateMemory = async (req, res) => {
   try {
-    const { memoryId } = req.params;
-    
-    // 1. Find Old Memory
-    const oldMemory = await Memory.findById(memoryId);
-    if (!oldMemory) return res.status(404).json({ message: "Memory not found" });
+    const oldMemory = req.memory; // From middleware
 
-    // 2. Permission Check
-    if (oldMemory.author.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "You are not authorized to edit this." });
-    }
-
-    // 3. 📸 CREATE SNAPSHOT
+    // 1. Create History Snapshot
     await MemoryVersion.create({
       memory: oldMemory._id,
-      
-      // 🔴 FIX HERE: Change 'editedBy' to 'editor' to match your Schema
-      editor: req.user._id, 
-      
+      editor: req.user._id,
       previousTitle: oldMemory.title,
       previousDescription: oldMemory.description,
-      previousMedia: oldMemory.media, 
+      previousMedia: oldMemory.media,
       createdAt: new Date()
     });
 
-    // 4. Apply Updates
+    // --------------------------------------------------------
+    // 🛡️ TAG PERMISSION LOGIC
+    // --------------------------------------------------------
+    let finalTaggedPersons = req.body.taggedPersons;
+
+    // If 'taggedPersons' is being updated...
+    if (finalTaggedPersons) {
+      const isOwner = req.user._id.toString() === oldMemory.author.toString();
+      
+      if (!isOwner) {
+        // NON-OWNER: Can ONLY remove themselves. Cannot add/remove others.
+        
+        // 1. Find the "Person" ID linked to this User in this Family
+        const userPerson = await Person.findOne({ user: req.user._id, family: oldMemory.family });
+        
+        if (userPerson) {
+            const oldTags = oldMemory.taggedPersons.map(id => id.toString());
+            const requestedTags = finalTaggedPersons; // IDs sent from frontend
+
+            // Check if they are trying to remove themselves
+            const isRemovingSelf = !requestedTags.includes(userPerson._id.toString());
+            
+            if (isRemovingSelf) {
+                // ✅ Allow: Reconstruct list as [Old List] - [Self]
+                // This ignores any other sneakily added/removed IDs
+                finalTaggedPersons = oldTags.filter(id => id !== userPerson._id.toString());
+            } else {
+                // ❌ Reject: They aren't removing themselves, so reset to Old List (No changes allowed)
+                finalTaggedPersons = oldTags;
+            }
+        } else {
+             // If we can't identify them in the family, they can't change tags
+             finalTaggedPersons = oldMemory.taggedPersons;
+        }
+      }
+      // If Owner: finalTaggedPersons remains as req.body.taggedPersons (Full Access)
+    }
+    // --------------------------------------------------------
+
+    // 2. Update Actual Memory
     const updatedMemory = await Memory.findByIdAndUpdate(
-      memoryId,
+      oldMemory._id,
       { 
         title: req.body.title,
         description: req.body.description,
-        date: req.body.date
+        date: req.body.date,
+        taggedPersons: finalTaggedPersons // 🟢 Apply the sanitized list
       },
       { new: true }
-    ).populate("author", "username avatarUrl");
+    )
+    .populate("author", "username avatarUrl")
+    .populate("taggedPersons", "name user"); // Populate 'user' for frontend logic
+
+    // 3. NOTIFY TAGGED USERS (Logic remains same)
+    if (updatedMemory.taggedPersons && updatedMemory.taggedPersons.length > 0) {
+      const taggedPeople = await Person.find({ _id: { $in: updatedMemory.taggedPersons } });
+      for (const person of taggedPeople) {
+        if (person.user && person.user.toString() !== req.user._id.toString()) {
+          await createNotification({
+            recipient: person.user,
+            sender: req.user._id,
+            type: 'memory_update', 
+            payload: {
+              memoryId: updatedMemory._id,
+              message: `${req.user.username} updated a memory you are tagged in.`
+            }
+          });
+        }
+      }
+    }
 
     res.json(updatedMemory);
-
   } catch (err) {
     console.error("Update Error:", err);
     res.status(500).json({ message: err.message });
   }
 };
-
 // ========================================================
 // 🟢 DELETE MEMORY
 // Optimized: Uses req.memory from 'isCollaborator' middleware
@@ -214,7 +253,7 @@ export const deleteMemory = async (req, res) => {
     }
 
     // 2. Delete Memory
-    await memory.deleteOne(); // Mongoose document method
+    await memory.deleteOne(); 
 
     // 3. Cleanup History
     await MemoryVersion.deleteMany({ memory: memory._id });
@@ -226,10 +265,8 @@ export const deleteMemory = async (req, res) => {
   }
 };
 
-
 // ========================================================
 // 🧠 HELPER: Send Notifications
-// Extracted to keep createMemory clean
 // ========================================================
 const sendMemoryNotifications = async (req, memory, familyId) => {
   try {

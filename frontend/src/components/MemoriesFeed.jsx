@@ -36,17 +36,19 @@ export default function MemoriesFeed({
             memory={memory}
             navigate={navigate}
             
-            // 🟢 Determine if menu should show
-            // If onDelete is null, canEdit becomes false
-            canEdit={!!onDelete && !!onEdit} 
+            // 🟢 Determine if menu should show at all (If ANY action is possible)
+            showMenu={!!onDelete || !!onEdit} 
             
             isOpen={openMenuId === memory._id}
             onToggleMenu={(e) => {
               e.stopPropagation();
               setOpenMenuId(openMenuId === memory._id ? null : memory._id);
             }}
-            onDelete={() => onDelete && onDelete(memory._id)}
-            onEdit={() => onEdit && onEdit(memory._id)}
+            
+            // Pass functions safely
+            onDelete={onDelete ? () => onDelete(memory._id) : null}
+            onEdit={onEdit ? () => onEdit(memory._id) : null}
+            
             isOwner={isOwner}
           />
         ))}
@@ -82,8 +84,8 @@ export default function MemoriesFeed({
   );
 }
 
-// 🟢 Sub-Component: MemoryThumbnail
-const MemoryThumbnail = ({ memory, navigate, canEdit, isOpen, onToggleMenu, onDelete, onEdit, isOwner }) => (
+// 🟢 Sub-Component: MemoryThumbnail (Updated Logic)
+const MemoryThumbnail = ({ memory, navigate, showMenu, isOpen, onToggleMenu, onDelete, onEdit, isOwner }) => (
   <div 
     onClick={() => navigate(`/stories/${memory._id}`)} 
     className="group relative aspect-square bg-gray-100 rounded-xl overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
@@ -100,8 +102,8 @@ const MemoryThumbnail = ({ memory, navigate, canEdit, isOpen, onToggleMenu, onDe
        )}
     </div>
 
-    {/* 🟢 HIDE MENU IF NOT OWNER (canEdit is false) */}
-    {canEdit && (
+    {/* 🟢 SHOW MENU ONLY IF ACTIONS EXIST */}
+    {showMenu && (
       <div className="absolute top-2 right-2">
         <button 
           onClick={onToggleMenu}
@@ -112,13 +114,23 @@ const MemoryThumbnail = ({ memory, navigate, canEdit, isOpen, onToggleMenu, onDe
 
         {isOpen && (
           <div className="absolute right-0 mt-2 w-36 bg-white rounded-xl shadow-xl py-1.5 z-20 border border-gray-100 animate-fadeIn origin-top-right">
-            <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="w-full text-left px-4 py-2.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-blue-600 flex items-center gap-3">
-              <FiEdit2 size={14}/> Edit Story
-            </button>
-            <div className="h-px bg-gray-100 my-0.5"></div>
-            <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="w-full text-left px-4 py-2.5 text-xs font-semibold text-red-500 hover:bg-red-50 flex items-center gap-3">
-              <FiTrash2 size={14}/> Delete
-            </button>
+            
+            {/* Show Edit only if passed */}
+            {onEdit && (
+              <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="w-full text-left px-4 py-2.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-blue-600 flex items-center gap-3">
+                <FiEdit2 size={14}/> Edit Story
+              </button>
+            )}
+
+            {/* Show Divider only if BOTH exist */}
+            {onEdit && onDelete && <div className="h-px bg-gray-100 my-0.5"></div>}
+
+            {/* Show Delete only if passed */}
+            {onDelete && (
+              <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="w-full text-left px-4 py-2.5 text-xs font-semibold text-red-500 hover:bg-red-50 flex items-center gap-3">
+                <FiTrash2 size={14}/> Delete
+              </button>
+            )}
           </div>
         )}
       </div>

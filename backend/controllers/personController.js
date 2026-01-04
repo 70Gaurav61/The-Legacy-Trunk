@@ -379,9 +379,17 @@ export const getFullTree = async (req, res) => {
 export const getPersons = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate("primaryPerson");
-    const familyId = req.family?._id || user.families[0];
 
-    const persons = await Person.find({ family: familyId }).populate("relationTo", "name").lean();
+    const familyId = req.params.familyId || req.family?._id || user.families[0];
+
+    if (!familyId) {
+       return res.status(400).json({ message: "No family context found" });
+    }
+
+    const persons = await Person.find({ family: familyId })
+      .select("name _id avatarUrl user") // Optimized select
+      .lean();
+      
     res.json(persons);
   } catch (err) {
     res.status(500).json({ message: err.message });

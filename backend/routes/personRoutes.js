@@ -28,6 +28,9 @@ router.get("/tree/whole", verifyAuth, getFullTree);
 // Standard List (Fetches based on user's family)
 router.get("/", verifyAuth, getPersons);
 
+// 2. For Tagging/Join (ID provided) -> hits "/:familyId"
+
+
 
 // ==========================================
 // 🔒 2. SPECIFIC ID ROUTES (Use isFamilyMember)
@@ -36,6 +39,8 @@ router.get("/", verifyAuth, getPersons);
 
 // Add Person (Checks if you are in the family you are adding to)
 router.post("/", verifyAuth, isFamilyMember, addPerson);
+router.get("/:familyId", verifyAuth, getPersons);
+
 
 // Invite Route
 router.post("/:personId/invite", verifyAuth, isFamilyMember, generateClaimCode);

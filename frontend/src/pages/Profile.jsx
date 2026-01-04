@@ -113,7 +113,8 @@ export default function Profile() {
     }
   };
 
-  const handleEditMemory = (memoryId) => navigate(`/stories/${memoryId}/edit`); 
+  // Navigate to edit page (make sure your Router handles /stories/:id/edit)
+  const handleEditMemory = (memoryId) => navigate(`/stories/${memoryId}`); 
 
   if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
 
@@ -150,16 +151,15 @@ export default function Profile() {
         <div className="md:col-span-2">
            <div className="flex gap-8 border-b border-gray-200 mb-6">
              <button onClick={() => setActiveTab("uploads")} className={`pb-3 text-sm font-bold transition-all relative ${activeTab === "uploads" ? "text-blue-600" : "text-gray-400"}`}>
-                My Stories
-                {activeTab === "uploads" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full"/>}
+               My Stories
+               {activeTab === "uploads" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full"/>}
              </button>
              <button onClick={() => setActiveTab("tagged")} className={`pb-3 text-sm font-bold transition-all relative ${activeTab === "tagged" ? "text-blue-600" : "text-gray-400"}`}>
-                Tagged In
-                {activeTab === "tagged" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full"/>}
+               Tagged In
+               {activeTab === "tagged" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full"/>}
              </button>
            </div>
 
-           {/* 🟢 CONDITIONAL LOGIC HERE */}
            <MemoriesFeed 
              layout="grid" 
              memories={activeTab === "uploads" ? memories.myUploads : memories.taggedIn}
@@ -167,9 +167,11 @@ export default function Profile() {
              openMenuId={openMenuId}
              setOpenMenuId={setOpenMenuId}
              
-             // 🟢 Only pass delete/edit if I own the tab (My Stories)
+             // 🟢 1. DELETE: Only if I am the owner (My Stories tab)
              onDelete={activeTab === "uploads" ? promptDelete : null}
-             onEdit={activeTab === "uploads" ? handleEditMemory : null}
+             
+             // 🟢 2. EDIT: ALWAYS allowed (My Stories OR Tagged In)
+             onEdit={handleEditMemory}
            />
         </div>
       </div>

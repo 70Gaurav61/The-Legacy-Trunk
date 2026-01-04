@@ -82,7 +82,7 @@ export default function JoinFamily({ user }) {
         isSelf: true 
       });
 
-      navigate("/dashboard");
+      navigate("/home");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add person");
     } finally {
