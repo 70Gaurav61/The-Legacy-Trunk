@@ -6,19 +6,18 @@ import { createNotification } from "../utiles/notificationService.js";
 
 // ========================================================
 // 🟢 CREATE MEMORY
-// Optimized: Uses req.family from 'isFamilyMember' middleware
 // ========================================================
 export const createMemory = async (req, res) => {
   try {
-    // 1. Setup Memory Data
     const memoryData = {
       ...req.body,
       author: req.user._id,
-      family: req.family._id, // ✅ Optimized: Use middleware data
+      family: req.family._id,
       date: req.body.date || new Date(),
+      // Ensure sharedWith is handled if sent
+      sharedWith: req.body.sharedWith || [] 
     };
 
-    // Handle Files (Media)
     if (req.files?.length > 0) {
       memoryData.media = req.files.map(file => ({
         url: file.location, 
@@ -27,10 +26,7 @@ export const createMemory = async (req, res) => {
       }));
     }
 
-    // 2. Save to Database
     const memory = await Memory.create(memoryData);
-
-    // 3. Trigger Notifications (Async)
     sendMemoryNotifications(req, memory, req.family._id);
 
     res.status(201).json(memory);
@@ -40,16 +36,38 @@ export const createMemory = async (req, res) => {
 };
 
 // ========================================================
-// 🟢 READ MEMORIES (Feed/Search)
+// 🟢 READ MEMORIES (Feed/Search) - FIXED FOR SCHEMA
 // ========================================================
 export const getMemories = async (req, res) => {
   try {
     const { userId, visibility, search } = req.query;
     const familyId = req.params.familyId; 
+    const currentUserId = req.user._id;
 
+    // Base Query
     let query = { family: familyId };
 
-    // 1. HANDLE SEARCH
+    // ---------------------------------------------------------
+    // 🛡️ STRICT VISIBILITY FILTER (Schema Based)
+    // ---------------------------------------------------------
+    const visibilityFilter = {
+      $or: [
+        { author: currentUserId },         // 1. Author always sees their own
+        { visibility: 'family' },          // 2. 'family' = Public to the family
+        { visibility: { $exists: false } },// 3. Default fallback
+        { 
+          // 4. SELECTED: Visible ONLY if current user is in 'sharedWith'
+          visibility: 'selected',
+          sharedWith: currentUserId 
+        },
+        // (Optional) You might also want tagged people to see it automatically:
+        // { taggedPersons: { $in: [currentUserPersonId] } } 
+      ]
+    };
+
+    // ---------------------------------------------------------
+    // 🔎 SEARCH
+    // ---------------------------------------------------------
     if (search) {
       const searchRegex = new RegExp(search, 'i'); 
       const [matchingUsers, matchingPersons] = await Promise.all([
@@ -59,7 +77,7 @@ export const getMemories = async (req, res) => {
 
       const isDate = !isNaN(Date.parse(search));
       
-      query.$or = [
+      const searchConditions = [
         { title: searchRegex },
         { description: searchRegex },
         { tags: searchRegex },
@@ -71,56 +89,78 @@ export const getMemories = async (req, res) => {
         const start = new Date(search);
         const end = new Date(search);
         end.setDate(end.getDate() + 1);
-        query.$or.push({ date: { $gte: start, $lt: end } });
+        searchConditions.push({ date: { $gte: start, $lt: end } });
       }
+
+      query = {
+        $and: [
+          query,
+          visibilityFilter,
+          { $or: searchConditions }
+        ]
+      };
     }
 
-    // 2. HANDLE FILTERS
-    if (visibility === 'private') {
-      query.author = req.user._id; 
-      query.visibility = 'private';
-    } 
+    // ---------------------------------------------------------
+    // 👤 USER PROFILE VIEW
+    // ---------------------------------------------------------
     else if (userId) {
-      let personId;
-      const targetUser = await User.findById(userId).select('primaryPerson');
-      if (targetUser?.primaryPerson) {
-        personId = targetUser.primaryPerson;
-      } else {
-        const linked = await Person.findOne({ user: userId }).select('_id');
-        if (linked) personId = linked._id;
-      }
+      // My Private Tab
+      if (visibility === 'private' && userId === currentUserId.toString()) {
+        query.author = currentUserId;
+        query.visibility = 'private';
+      } 
+      else {
+        // Viewing someone else
+        let targetPersonId;
+        const targetUser = await User.findById(userId).select('primaryPerson');
+        
+        if (targetUser?.primaryPerson) {
+          targetPersonId = targetUser.primaryPerson;
+        } else {
+          const linked = await Person.findOne({ user: userId }).select('_id');
+          if (linked) targetPersonId = linked._id;
+        }
 
-      const userFilter = personId 
-        ? { $or: [{ author: userId }, { taggedPersons: personId }] }
-        : { author: userId };
+        const userFilter = targetPersonId 
+          ? { $or: [{ author: userId }, { taggedPersons: targetPersonId }] }
+          : { author: userId };
 
-      if (query.$or) {
-        query = { $and: [query, userFilter] };
-      } else {
-        Object.assign(query, userFilter);
-      }
-      
-      if (userId !== req.user._id.toString()) {
-        query.visibility = { $ne: 'private' };
+        query = {
+          $and: [
+            query,
+            userFilter,
+            visibilityFilter
+          ]
+        };
+        
+        // Hide private items explicitly when viewing others
+        if (userId !== currentUserId.toString()) {
+          query.visibility = { $ne: 'private' };
+        }
       }
     } 
-    else if (!search) {
-      query.$and = [{
-        $or: [
-          { visibility: { $ne: 'private' } },
-          { author: req.user._id }
+    // ---------------------------------------------------------
+    // 🏠 DEFAULT FEED
+    // ---------------------------------------------------------
+    else {
+      query = {
+        $and: [
+          query,
+          visibilityFilter
         ]
-      }];
+      };
     }
 
     const memories = await Memory.find(query)
       .populate("author", "username avatarUrl")
-      // 🟢 CRITICAL FIX: Add "user" so frontend knows who is tagged
       .populate("taggedPersons", "name user") 
+      .populate("sharedWith", "username") // Populate sharedWith for debugging/frontend
       .sort({ date: -1 });
 
     res.json(memories);
   } catch (err) {
+    console.error("Get Memories Error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -132,10 +172,19 @@ export const getMemoryById = async (req, res) => {
   try {
     const memory = await Memory.findById(req.params.id)
       .populate("author", "username avatarUrl")
-      // 🟢 CRITICAL FIX: Add "user" so frontend knows who is tagged
-      .populate("taggedPersons", "name avatarUrl user");
+      .populate("taggedPersons", "name avatarUrl user")
+      .populate("sharedWith", "username avatarUrl");
 
     if (!memory) return res.status(404).json({ message: "Memory not found" });
+
+    // Check Access for Single Memory
+    const isAuthor = memory.author._id.toString() === req.user._id.toString();
+    const isPublic = memory.visibility === 'family';
+    const isShared = memory.visibility === 'selected' && memory.sharedWith.some(u => u._id.toString() === req.user._id.toString());
+    
+    if (!isAuthor && !isPublic && !isShared) {
+         return res.status(403).json({ message: "You do not have permission to view this memory." });
+    }
 
     res.json(memory);
   } catch (err) {
@@ -144,14 +193,13 @@ export const getMemoryById = async (req, res) => {
 };
 
 // ========================================================
-// 🟢 UPDATE MEMORY (With Notifications)
+// 🟢 UPDATE MEMORY
 // ========================================================
-
 export const updateMemory = async (req, res) => {
   try {
-    const oldMemory = req.memory; // From middleware
+    const oldMemory = req.memory; 
 
-    // 1. Create History Snapshot
+    // History Snapshot
     await MemoryVersion.create({
       memory: oldMemory._id,
       editor: req.user._id,
@@ -161,76 +209,44 @@ export const updateMemory = async (req, res) => {
       createdAt: new Date()
     });
 
-    // --------------------------------------------------------
-    // 🛡️ TAG PERMISSION LOGIC
-    // --------------------------------------------------------
+    // Handle Tagged Persons (Non-owner can only remove self)
     let finalTaggedPersons = req.body.taggedPersons;
-
-    // If 'taggedPersons' is being updated...
     if (finalTaggedPersons) {
       const isOwner = req.user._id.toString() === oldMemory.author.toString();
-      
       if (!isOwner) {
-        // NON-OWNER: Can ONLY remove themselves. Cannot add/remove others.
-        
-        // 1. Find the "Person" ID linked to this User in this Family
         const userPerson = await Person.findOne({ user: req.user._id, family: oldMemory.family });
-        
         if (userPerson) {
             const oldTags = oldMemory.taggedPersons.map(id => id.toString());
-            const requestedTags = finalTaggedPersons; // IDs sent from frontend
-
-            // Check if they are trying to remove themselves
+            const requestedTags = finalTaggedPersons;
             const isRemovingSelf = !requestedTags.includes(userPerson._id.toString());
             
             if (isRemovingSelf) {
-                // ✅ Allow: Reconstruct list as [Old List] - [Self]
-                // This ignores any other sneakily added/removed IDs
                 finalTaggedPersons = oldTags.filter(id => id !== userPerson._id.toString());
             } else {
-                // ❌ Reject: They aren't removing themselves, so reset to Old List (No changes allowed)
                 finalTaggedPersons = oldTags;
             }
         } else {
-             // If we can't identify them in the family, they can't change tags
              finalTaggedPersons = oldMemory.taggedPersons;
         }
       }
-      // If Owner: finalTaggedPersons remains as req.body.taggedPersons (Full Access)
     }
-    // --------------------------------------------------------
 
-    // 2. Update Actual Memory
+    // UPDATE
     const updatedMemory = await Memory.findByIdAndUpdate(
       oldMemory._id,
       { 
         title: req.body.title,
         description: req.body.description,
         date: req.body.date,
-        taggedPersons: finalTaggedPersons // 🟢 Apply the sanitized list
+        taggedPersons: finalTaggedPersons,
+        // ✅ Allow updating visibility & sharedWith
+        visibility: req.body.visibility,
+        sharedWith: req.body.sharedWith 
       },
       { new: true }
     )
     .populate("author", "username avatarUrl")
-    .populate("taggedPersons", "name user"); // Populate 'user' for frontend logic
-
-    // 3. NOTIFY TAGGED USERS (Logic remains same)
-    if (updatedMemory.taggedPersons && updatedMemory.taggedPersons.length > 0) {
-      const taggedPeople = await Person.find({ _id: { $in: updatedMemory.taggedPersons } });
-      for (const person of taggedPeople) {
-        if (person.user && person.user.toString() !== req.user._id.toString()) {
-          await createNotification({
-            recipient: person.user,
-            sender: req.user._id,
-            type: 'memory_update', 
-            payload: {
-              memoryId: updatedMemory._id,
-              message: `${req.user.username} updated a memory you are tagged in.`
-            }
-          });
-        }
-      }
-    }
+    .populate("taggedPersons", "name user");
 
     res.json(updatedMemory);
   } catch (err) {
@@ -238,24 +254,19 @@ export const updateMemory = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 // ========================================================
 // 🟢 DELETE MEMORY
-// Optimized: Uses req.memory from 'isCollaborator' middleware
 // ========================================================
 export const deleteMemory = async (req, res) => {
   try {
-    const memory = req.memory; // ✅ Optimized: Data exists
+    const memory = req.memory; 
 
-    // 1. Strict Ownership Check
-    // Middleware allows collaborators, but only AUTHOR can delete
     if (memory.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Only the author can delete this memory." });
     }
 
-    // 2. Delete Memory
     await memory.deleteOne(); 
-
-    // 3. Cleanup History
     await MemoryVersion.deleteMany({ memory: memory._id });
 
     res.json({ message: "Memory deleted successfully" });
@@ -265,14 +276,14 @@ export const deleteMemory = async (req, res) => {
   }
 };
 
-// ========================================================
-// 🧠 HELPER: Send Notifications
-// ========================================================
+// ... sendMemoryNotifications function remains the same ...
+// You can keep the notification logic as it was, 
+// just ensure you import Person and User correctly.
 const sendMemoryNotifications = async (req, memory, familyId) => {
   try {
     let taggedUserIds = [];
 
-    // 1. Notify Tagged Persons
+    // Notify Tagged Persons
     if (req.body.taggedPersons?.length > 0) {
       const taggedPeople = await Person.find({ _id: { $in: req.body.taggedPersons } });
       for (const person of taggedPeople) {
@@ -291,22 +302,42 @@ const sendMemoryNotifications = async (req, memory, familyId) => {
       }
     }
 
-    // 2. Notify Family (Broadcast)
-    const familyMembers = await User.find({ families: familyId });
-    for (const member of familyMembers) {
-      const memberId = member._id.toString();
-      // Skip Self and Skip Tagged users (they already got a specific alert)
-      if (memberId !== req.user._id.toString() && !taggedUserIds.includes(memberId)) {
-        await createNotification({
-          recipient: memberId,
-          sender: req.user._id,
-          type: 'memory_create',
-          payload: {
-            memoryId: memory._id,
-            message: `${req.user.username} added a new memory.`
+    // Notify Shared With (Selected Users)
+    // 🟢 ADDED: Notify users in 'sharedWith' if visibility is 'selected'
+    if (req.body.visibility === 'selected' && req.body.sharedWith?.length > 0) {
+        for (const userId of req.body.sharedWith) {
+            if (userId !== req.user._id.toString() && !taggedUserIds.includes(userId)) {
+                 await createNotification({
+                    recipient: userId,
+                    sender: req.user._id,
+                    type: 'memory_share', // You might need to handle this type in frontend
+                    payload: {
+                      memoryId: memory._id,
+                      message: `${req.user.username} shared a memory with you.`
+                    }
+                  });
+            }
+        }
+        return; // Stop here if selected, don't broadcast to whole family
+    }
+
+    // Notify Family (Broadcast - Only if visibility is FAMILY)
+    if (req.body.visibility === 'family' || !req.body.visibility) {
+        const familyMembers = await User.find({ families: familyId });
+        for (const member of familyMembers) {
+          const memberId = member._id.toString();
+          if (memberId !== req.user._id.toString() && !taggedUserIds.includes(memberId)) {
+            await createNotification({
+              recipient: memberId,
+              sender: req.user._id,
+              type: 'memory_create',
+              payload: {
+                memoryId: memory._id,
+                message: `${req.user.username} added a new memory.`
+              }
+            });
           }
-        });
-      }
+        }
     }
   } catch (err) {
     console.error("Notification Error:", err);

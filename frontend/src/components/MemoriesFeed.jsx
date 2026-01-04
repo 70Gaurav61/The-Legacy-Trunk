@@ -67,7 +67,7 @@ export default function MemoriesFeed({
   const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
 
   return (
-    <div className="space-y-12 pb-20 animate-fadeIn">
+    <div className="space-y-12 pb-20 p-5 animate-fadeIn">
       {sortedDates.map((date) => (
         <div key={date}>
           <h3 className="text-xl font-bold text-gray-800 mb-4 sticky top-20 z-10 bg-gray-50/95 backdrop-blur py-2 w-max px-4 rounded-full shadow-sm border border-gray-100">
