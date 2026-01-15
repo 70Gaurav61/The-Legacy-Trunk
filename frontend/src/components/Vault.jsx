@@ -1,178 +1,344 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { FiLock, FiUnlock, FiFileText, FiImage, FiPlus } from "react-icons/fi";
 import { api } from "../services/useAuth";
 
 export default function Vault() {
-  const [items, setItems] = useState([]);
+  /* CREATE VAULT */
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [createError, setCreateError] = useState(null);
+
+  /* VAULT */
+  const [vault, setVault] = useState(null);
+  const [unlockedFiles, setUnlockedFiles] = useState([]);
+  const [isUnlocked, setIsUnlocked] = useState(false);
   const [loading, setLoading] = useState(true);
-  
-  // Unlock Modal State
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [passwordInput, setPasswordInput] = useState("");
-  const [decryptedUrl, setDecryptedUrl] = useState(null);
+
+  /* UNLOCK */
+  const [showUnlock, setShowUnlock] = useState(false);
+  const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
 
-  // 1. Fetch Locked Items (Metadata only, no file URLs)
+  /* UPLOAD */
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadError, setUploadError] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  /* 🔴 ADDED: PREVIEW STATE */
+  const [previewFile, setPreviewFile] = useState(null);
+
   useEffect(() => {
-    fetchVaultItems();
+    fetchVault();
   }, []);
 
-  const fetchVaultItems = async () => {
+  const fetchVault = async () => {
     try {
-      const res = await api.get("/storage"); // uses storageController.getStorageItems
-      setItems(res.data);
-    } catch (err) {
-      console.error("Failed to load vault", err);
+      const res = await api.get("/vault");
+      setVault(res.data);
     } finally {
       setLoading(false);
     }
   };
 
-  // 2. Handle Unlock Attempt
-  // Note: Since your backend hashes passwords, you usually verify this 
-  // by sending the password to an endpoint like POST /storage/:id/verify
-  // If you haven't built that verify endpoint yet, you might need to.
-  // Assuming a verify endpoint exists:
+  /* CREATE VAULT */
+  const handleCreateVault = async (e) => {
+    e.preventDefault();
+    setCreateError(null);
+
+    if (newPassword !== confirmPassword) {
+      setCreateError("Passwords do not match");
+      return;
+    }
+
+    await api.post("/vault/create", { password: newPassword });
+    setLoading(true);
+    fetchVault();
+  };
+
+  /* UNLOCK VAULT */
   const handleUnlock = async (e) => {
     e.preventDefault();
     setError(null);
+
     try {
-      // 🟢 Requirement: You need a route to verify storage password and get the signed URL
-      // If simply returning the URL in getStorageItems was risky, this is safer.
-      const res = await api.post(`/storage/${selectedItem._id}/unlock`, { password: passwordInput });
-      
-      if (res.data.success) {
-         setDecryptedUrl(res.data.fileUrl); // Backend returns real URL only on success
-      }
-    } catch (err) {
-      setError("Incorrect password. Access denied.");
+      const res = await api.post("/vault/unlock", { password });
+      setUnlockedFiles(res.data.files);
+      setIsUnlocked(true);
+      setShowUnlock(false);
+      setPassword("");
+    } catch {
+      setError("Incorrect vault password");
     }
   };
 
-  const closeUnlockModal = () => {
-    setSelectedItem(null);
-    setPasswordInput("");
-    setDecryptedUrl(null);
-    setError(null);
+  /* UPLOAD FILE */
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    setUploadError(null);
+
+    if (!uploadFile) {
+      setUploadError("Please select a file");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", uploadFile);
+
+    try {
+      setUploading(true);
+      await api.post("/vault/upload", formData);
+
+      setShowUpload(false);
+      setUploadFile(null);
+      setIsUnlocked(false);
+      setUnlockedFiles([]);
+      setLoading(true);
+      fetchVault();
+    } catch {
+      setUploadError("Upload failed");
+    } finally {
+      setUploading(false);
+    }
   };
+
+  if (loading) return <div className="p-8">Loading...</div>;
+
+  /* CREATE VAULT UI */
+  if (vault === null) {
+    return (
+      <div className="p-8 max-w-md mx-auto">
+        <h1 className="text-2xl font-bold text-center mb-4">
+          Create Your Personal Vault
+        </h1>
+
+        <form onSubmit={handleCreateVault} className="space-y-4">
+          <input
+            type="password"
+            placeholder="Set vault password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="w-full border p-3 rounded-lg"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Confirm vault password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full border p-3 rounded-lg"
+            required
+          />
+          {createError && (
+            <p className="text-red-500 text-center">{createError}</p>
+          )}
+          <button className="w-full bg-indigo-600 text-white py-3 rounded-lg">
+            Create Vault
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  const files = isUnlocked ? unlockedFiles : vault.files;
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-            <FiLock className="text-indigo-600" /> Family Vault
-          </h1>
-          <p className="text-gray-500 mt-1">Securely store important documents (Wills, Deeds, Medical Records).</p>
+        <h1 className="text-3xl font-bold flex items-center gap-3">
+          <FiLock /> {vault.vaultName || "My Vault"}
+        </h1>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowUnlock(true)}
+            className="bg-black text-white px-4 py-2 rounded-lg"
+          >
+            <FiUnlock /> Unlock
+          </button>
+
+          <button
+            onClick={() => setShowUpload(true)}
+            disabled={!isUnlocked}
+            className={`px-4 py-2 rounded-lg text-white ${
+              isUnlocked
+                ? "bg-indigo-600"
+                : "bg-gray-400 cursor-not-allowed"
+            }`}
+          >
+            <FiPlus /> Upload
+          </button>
         </div>
-        <button className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
-          <FiPlus /> Upload Secure File
-        </button>
       </div>
 
-      {loading ? (
-        <div>Loading Vault...</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {items.map((item) => (
-            <div 
-              key={item._id} 
-              onClick={() => setSelectedItem(item)}
-              className="bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-lg cursor-pointer transition-all group relative overflow-hidden"
-            >
-              {/* Background Pattern */}
-              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <FiLock size={100} />
-              </div>
-
-              <div className="flex items-start justify-between mb-4">
-                <div className={`p-3 rounded-full ${item.file.mimeType.includes('image') ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
-                   {item.file.mimeType.includes('image') ? <FiImage size={24} /> : <FiFileText size={24} />}
-                </div>
-                <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full font-medium">
-                  {new Date(item.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-
-              <h3 className="text-lg font-bold text-gray-800 mb-1">{item.title}</h3>
-              <p className="text-sm text-gray-500 line-clamp-2">{item.description}</p>
-              
-              <div className="mt-4 pt-4 border-t border-gray-100 flex items-center text-xs text-gray-400 gap-2">
-                <FiLock size={12} /> Password Protected
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* UNLOCK MODAL */}
-      {selectedItem && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl animate-fadeIn">
-            
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FiLock size={32} />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-800">Restricted Access</h2>
-              <p className="text-gray-500 mt-2">
-                Enter the specific password for <strong>"{selectedItem.title}"</strong> to decrypt it.
-              </p>
-            </div>
-
-            {!decryptedUrl ? (
-              <form onSubmit={handleUnlock} className="space-y-4">
-                <input 
-                  type="password" 
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder="Enter Document Password"
-                  className="w-full text-center text-2xl tracking-widest border-2 border-gray-200 rounded-xl py-3 focus:border-indigo-500 outline-none transition-colors"
-                  autoFocus
-                />
-                
-                {error && <p className="text-red-500 text-center text-sm font-medium">{error}</p>}
-
-                <div className="grid grid-cols-2 gap-4 mt-6">
-                  <button 
-                    type="button" 
-                    onClick={closeUnlockModal}
-                    className="py-3 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="py-3 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg hover:shadow-indigo-500/30 transition-all"
-                  >
-                    Unlock File
-                  </button>
-                </div>
-              </form>
-            ) : (
-              // FILE REVEALED
-              <div className="text-center space-y-6">
-                <div className="bg-green-50 text-green-700 p-4 rounded-xl border border-green-200">
-                  <FiUnlock className="mx-auto mb-2" size={24}/>
-                  Access Granted
-                </div>
-                
-                <a 
-                  href={decryptedUrl} 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="block w-full py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors"
-                >
-                  Download / View File
-                </a>
-                <button onClick={closeUnlockModal} className="text-gray-400 hover:text-gray-600 text-sm">Close</button>
-              </div>
+      {/* 🟡 MODIFIED: CLICKABLE PREVIEW GRID */}
+      <div className="grid md:grid-cols-3 gap-6">
+        {files.map((file, i) => (
+          <div
+            key={i}
+            onClick={() => file.url && setPreviewFile(file)} // 🔴 ADDED
+            className="border p-4 rounded-xl bg-white shadow-sm cursor-pointer hover:shadow-lg"
+          >
+            {/* IMAGE */}
+            {file.mimeType?.startsWith("image") && file.url && (
+              <img
+                src={file.url}
+                className="w-full h-40 object-cover rounded-lg"
+                alt={file.originalName}
+              />
             )}
-            
+
+            {/* VIDEO */}
+            {file.mimeType?.startsWith("video") && file.url && (
+              <video
+                src={file.url}
+                className="w-full h-40 object-cover rounded-lg"
+                muted
+                preload="metadata"
+              />
+            )}
+
+            {/* DOCUMENT */}
+            {!file.mimeType?.startsWith("image") &&
+              !file.mimeType?.startsWith("video") && (
+                <div className="flex items-center justify-center h-40 bg-gray-100 rounded-lg">
+                  <FiFileText size={32} />
+                </div>
+              )}
+
+            <p className="font-semibold mt-3 text-sm truncate">
+              {file.originalName}
+            </p>
+
+            {!file.url && (
+              <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                <FiLock /> Locked
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* 🔴 ADDED: PREVIEW MODAL */}
+      {previewFile && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
+          <button
+            onClick={() => setPreviewFile(null)}
+            className="absolute top-6 right-6 text-white text-3xl"
+          >
+            ✕
+          </button>
+
+          <div className="max-w-5xl max-h-[90vh] w-full p-4 flex items-center justify-center">
+            {previewFile.mimeType?.startsWith("image") && (
+              <img
+                src={previewFile.url}
+                className="max-h-[90vh] max-w-full rounded-lg"
+                alt={previewFile.originalName}
+              />
+            )}
+
+            {previewFile.mimeType?.startsWith("video") && (
+              <video
+                src={previewFile.url}
+                controls
+                autoPlay
+                className="max-h-[90vh] max-w-full rounded-lg"
+              />
+            )}
+
+            {!previewFile.mimeType?.startsWith("image") &&
+              !previewFile.mimeType?.startsWith("video") && (
+                <iframe
+                  src={previewFile.url}
+                  title={previewFile.originalName}
+                  className="w-full h-[90vh] rounded-lg bg-white"
+                />
+              )}
           </div>
         </div>
       )}
 
+      {/* UNLOCK MODAL */}
+      {showUnlock && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
+          <form
+            onSubmit={handleUnlock}
+            className="bg-white p-8 rounded-xl w-full max-w-md"
+          >
+            <h2 className="text-xl font-bold mb-4 text-center">
+              Unlock Personal Vault
+            </h2>
+
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border p-3 rounded-lg text-center"
+              placeholder="Vault password"
+              autoFocus
+            />
+
+            {error && (
+              <p className="text-red-500 text-center mt-2">{error}</p>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowUnlock(false)}
+                className="py-2 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button className="bg-indigo-600 text-white py-2 rounded-lg">
+                Unlock
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* UPLOAD MODAL */}
+      {showUpload && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
+          <form
+            onSubmit={handleUpload}
+            className="bg-white p-8 rounded-xl w-full max-w-md"
+          >
+            <h2 className="text-xl font-bold mb-4 text-center">
+              Upload to Vault
+            </h2>
+
+            <input
+              type="file"
+              onChange={(e) => setUploadFile(e.target.files[0])}
+              className="w-full border p-3 rounded-lg"
+              accept="image/*,video/*,application/pdf"
+            />
+
+            {uploadError && (
+              <p className="text-red-500 text-center mt-2">{uploadError}</p>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowUpload(false)}
+                className="py-2 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={uploading}
+                className="bg-indigo-600 text-white py-2 rounded-lg"
+              >
+                {uploading ? "Uploading..." : "Upload"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
