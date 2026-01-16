@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom"; // 🟢 Added Outlet
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./services/useAuth";
 
 import Header from "./components/Header";
@@ -19,58 +19,85 @@ import StoryView from "./pages/StoryView";
 import Profile from "./pages/Profile";
 import Vault from "./components/Vault";
 
-// 🟢 1. Create a Layout for standard pages (Restores the container look)
+// Layout for public pages
 const StandardLayout = () => (
   <div className="container mx-auto px-4 py-6">
     <Outlet />
   </div>
 );
 
+// 🟢 Protected Route Wrapper
+// This ensures the route exists in the manifest but redirects if not logged in
+const ProtectedRoute = ({ user, children }) => {
+  if (!user) {
+    return <Navigate to="/auth/login" replace />;
+  }
+  return children;
+};
+
 export default function App() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth(); // Ensure your useAuth hook provides a loading state
+
+  // Prevent "No routes matched" by waiting for the auth service to initialize
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <BrowserRouter>
       <div className="min-h-screen flex flex-col">
         <Header />
 
-        {/* 🟢 2. REMOVED "container" from here. Now Main is full width. */}
         <main className="flex-1 w-full p-3 bg-gray-50">
           <Routes>
-            {/* Redirect logic */}
+            {/* 1. Root Redirect */}
             <Route
               path="/"
               element={user ? <Navigate to="/home" /> : <Navigate to="/auth/login" />}
             />
 
-            {/* Public Routes (Wrapped in StandardLayout to keep them centered) */}
-            {!user && (
-              <Route element={<StandardLayout />}>
-                <Route path="/auth/login" element={<Login />} />
-                <Route path="/auth/signup" element={<Signup />} />
-              </Route>
-            )}
+            {/* 2. Public Routes */}
+            <Route element={<StandardLayout />}>
+              <Route 
+                path="/auth/login" 
+                element={!user ? <Login /> : <Navigate to="/home" />} 
+              />
+              <Route 
+                path="/auth/signup" 
+                element={!user ? <Signup /> : <Navigate to="/home" />} 
+              />
+            </Route>
 
-            {/* Private Routes */}
-            {user && (
-              <>
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/profile/:id" element={<Profile />} />
-                <Route path="/home" element={<Home />} />
-                <Route path="/stories" element={<Stories />} />
-                <Route path="/create" element={<Create />} />
-                <Route path="/timeline" element={<TimelinePage />} />
-                <Route path="/circles" element={<Circles />} />
-                <Route path="/choose" element={<Choose />} />
-                <Route path="/join" element={<Join />} />
-                <Route path="/create-story" element={<CreateStory />} />
-                <Route path="/family-tree" element={<TreePage />} />
-                <Route path="/private" element={<PrivateGallery />} />
-                <Route path="/stories/:id" element={<StoryView />} />
-                <Route path="/stories/:id/edit" element={<StoryView initialEditMode={true} />} />
-                <Route path="/vault" element={<Vault />} />
-              </>
-            )}
+            {/* 3. Private Routes - Always defined, but access is controlled */}
+            <Route path="/home" element={<ProtectedRoute user={user}><Home /></ProtectedRoute>} />
+            <Route path="/stories" element={<ProtectedRoute user={user}><Stories /></ProtectedRoute>} />
+            <Route path="/create" element={<ProtectedRoute user={user}><Create /></ProtectedRoute>} />
+            <Route path="/timeline" element={<ProtectedRoute user={user}><TimelinePage /></ProtectedRoute>} />
+            <Route path="/circles" element={<ProtectedRoute user={user}><Circles /></ProtectedRoute>} />
+            <Route path="/choose" element={<ProtectedRoute user={user}><Choose /></ProtectedRoute>} />
+            <Route path="/join" element={<ProtectedRoute user={user}><Join /></ProtectedRoute>} />
+            <Route path="/create-story" element={<ProtectedRoute user={user}><CreateStory /></ProtectedRoute>} />
+            <Route path="/family-tree" element={<ProtectedRoute user={user}><TreePage /></ProtectedRoute>} />
+            <Route path="/private" element={<ProtectedRoute user={user}><PrivateGallery /></ProtectedRoute>} />
+            <Route path="/vault" element={<ProtectedRoute user={user}><Vault /></ProtectedRoute>} />
+            
+            {/* Profile Routes */}
+            <Route path="/profile" element={<ProtectedRoute user={user}><Profile /></ProtectedRoute>} />
+            <Route path="/profile/:id" element={<ProtectedRoute user={user}><Profile /></ProtectedRoute>} />
+            
+            {/* Story View Routes */}
+            <Route path="/stories/:id" element={<ProtectedRoute user={user}><StoryView /></ProtectedRoute>} />
+            <Route 
+              path="/stories/:id/edit" 
+              element={<ProtectedRoute user={user}><StoryView initialEditMode={true} /></ProtectedRoute>} 
+            />
+
+            {/* 4. Catch-all for undefined routes */}
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>
       </div>

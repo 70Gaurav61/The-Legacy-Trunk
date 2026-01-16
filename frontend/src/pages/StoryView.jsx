@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FiArrowLeft, FiCalendar, FiUsers, FiEdit3, FiSave, FiX, FiClock, FiPlus, FiMoreVertical, FiTrash2 } from "react-icons/fi";
+import { 
+  FiArrowLeft, FiCalendar, FiUsers, FiEdit3, FiSave, FiX, 
+  FiClock, FiPlus, FiMoreVertical, FiTrash2, FiChevronLeft, FiChevronRight 
+} from "react-icons/fi";
 import { api } from "../services/useAuth"; 
 
 // Components
@@ -26,8 +29,6 @@ export default function StoryView({ initialEditMode = false }) {
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [showAddTag, setShowAddTag] = useState(false); 
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // Modal States
   const [showUntagConfirm, setShowUntagConfirm] = useState(false); 
 
   // Form State
@@ -37,6 +38,28 @@ export default function StoryView({ initialEditMode = false }) {
     date: "",
     taggedPersons: [] 
   });
+
+  // 🟢 Navigation Logic
+  const nextMedia = useCallback(() => {
+    if (!memory?.media) return;
+    setActiveMediaIndex((prev) => (prev + 1) % memory.media.length);
+  }, [memory]);
+
+  const prevMedia = useCallback(() => {
+    if (!memory?.media) return;
+    setActiveMediaIndex((prev) => (prev - 1 + memory.media.length) % memory.media.length);
+  }, [memory]);
+
+  // Handle Keyboard Arrows
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (isEditing) return;
+      if (e.key === "ArrowLeft") prevMedia();
+      if (e.key === "ArrowRight") nextMedia();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [prevMedia, nextMedia, isEditing]);
 
   useEffect(() => {
     fetchMemory();
@@ -50,7 +73,7 @@ export default function StoryView({ initialEditMode = false }) {
     if (isEditing && memory && currentUserId === memory.author?._id) {
        fetchFamilyMembers();
     }
-  }, [isEditing, memory]);
+  }, [isEditing, memory, currentUserId]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -63,7 +86,6 @@ export default function StoryView({ initialEditMode = false }) {
     try {
       const res = await api.get(`/memories/detail/${id}`); 
       setMemory(res.data);
-      
       setFormData({
         title: res.data.title || "",
         description: res.data.description || "",
@@ -78,17 +100,14 @@ export default function StoryView({ initialEditMode = false }) {
   };
 
   const fetchFamilyMembers = async () => {
-      try {
-        const familyId = typeof memory.family === 'object' ? memory.family._id : memory.family;
-        
-        // 🟢 CHANGE: Use the standardized persons route
-        const res = await api.get(`/persons/${familyId}`); 
-        
-        setFamilyMembers(res.data);
-      } catch (err) {
-        console.log("Could not fetch family members");
-      }
-    };
+    try {
+      const familyId = typeof memory.family === 'object' ? memory.family._id : memory.family;
+      const res = await api.get(`/persons/${familyId}`); 
+      setFamilyMembers(res.data);
+    } catch (err) {
+      console.log("Could not fetch family members");
+    }
+  };
 
   const fetchVersions = async () => {
     try {
@@ -96,11 +115,7 @@ export default function StoryView({ initialEditMode = false }) {
       setVersions(res.data);
       setShowHistory(true);
     } catch (err) {
-      if (err.response && err.response.status === 403) {
-         setToast({ message: "Only the owner can view edit history.", type: "error" });
-      } else {
-         setToast({ message: "Could not load history", type: "error" });
-      }
+      setToast({ message: "Could not load history", type: "error" });
     }
   };
 
@@ -110,10 +125,8 @@ export default function StoryView({ initialEditMode = false }) {
           ...formData,
           taggedPersons: formData.taggedPersons.map(p => p._id)
       };
-
       const res = await api.put(`/memories/${id}`, payload);
       setMemory(res.data); 
-      setFormData({ ...formData, taggedPersons: res.data.taggedPersons });
       setIsEditing(false);
       setToast({ message: "Story updated!", type: "success" });
     } catch (err) {
@@ -121,7 +134,6 @@ export default function StoryView({ initialEditMode = false }) {
     }
   };
 
-  // Tag Handlers (Owner removing others)
   const handleRemoveTag = (personId) => {
      setFormData(prev => ({
          ...prev,
@@ -129,40 +141,20 @@ export default function StoryView({ initialEditMode = false }) {
      }));
   };
 
-  // 1. Prompt Self Untag (Opens Modal)
   const promptSelfUntag = () => {
-    setMenuOpen(false); // Close dropdown
-    setShowUntagConfirm(true); // Open Modal
+    setMenuOpen(false);
+    setShowUntagConfirm(true);
   };
 
-  // 2. Execute Self Untag (Called by Modal)
   const executeSelfUntag = async () => {
     try {
-      // Find MY person ID from the current list
       const myTag = memory.taggedPersons.find(p => (p.user?._id === currentUserId) || (p.user === currentUserId));
-      
-      if (!myTag) {
-          setShowUntagConfirm(false);
-          return;
-      }
-
-      const newTagsIds = memory.taggedPersons
-        .filter(p => p._id !== myTag._id)
-        .map(p => p._id);
-
-      // Send Update
-      await api.put(`/memories/${id}`, {
-        ...formData,
-        taggedPersons: newTagsIds
-      });
-
-      setToast({ message: "You have been untagged.", type: "success" });
-      setShowUntagConfirm(false);
-      navigate(-1); // Go back
+      if (!myTag) return;
+      const newTagsIds = memory.taggedPersons.filter(p => p._id !== myTag._id).map(p => p._id);
+      await api.put(`/memories/${id}`, { ...formData, taggedPersons: newTagsIds });
+      navigate(-1);
     } catch (err) {
-      console.error(err);
       setToast({ message: "Failed to remove tag", type: "error" });
-      setShowUntagConfirm(false);
     }
   };
 
@@ -171,10 +163,7 @@ export default function StoryView({ initialEditMode = false }) {
      if (!personId) return;
      const personToAdd = familyMembers.find(m => m._id === personId);
      if (personToAdd && !formData.taggedPersons.some(p => p._id === personId)) {
-         setFormData(prev => ({
-             ...prev,
-             taggedPersons: [...prev.taggedPersons, personToAdd]
-         }));
+         setFormData(prev => ({ ...prev, taggedPersons: [...prev.taggedPersons, personToAdd] }));
      }
      setShowAddTag(false);
   };
@@ -188,7 +177,6 @@ export default function StoryView({ initialEditMode = false }) {
   if (loading) return <div className="h-screen flex items-center justify-center text-gray-500">Loading story...</div>;
   if (!memory) return <div className="h-screen flex items-center justify-center text-gray-500">Story not found.</div>;
 
-  // Permission Logic
   const isOwner = currentUserId === memory.author?._id;
   const isTagged = memory.taggedPersons?.some(p => (p.user?._id === currentUserId) || (p.user === currentUserId));
   const canEdit = isOwner || isTagged;
@@ -198,13 +186,12 @@ export default function StoryView({ initialEditMode = false }) {
       
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       
-      {/* 🟢 Untag Confirmation Modal (Updated Message) */}
       <ConfirmModal 
         isOpen={showUntagConfirm}
         onClose={() => setShowUntagConfirm(false)}
         onConfirm={executeSelfUntag}
         title="Remove Tag?"
-        message="Are you sure you want to remove yourself from this memory? You might lose access to edit it afterwards."
+        message="Are you sure you want to remove yourself from this memory?"
       />
 
       {showHistory && <HistoryModal versions={versions} onClose={() => setShowHistory(false)} />}
@@ -227,7 +214,6 @@ export default function StoryView({ initialEditMode = false }) {
           </div>
         </div>
 
-        {/* CONTROLS */}
         {canEdit && (
           <div className="flex items-center gap-2">
             {isEditing ? (
@@ -239,46 +225,24 @@ export default function StoryView({ initialEditMode = false }) {
               </>
             ) : (
               <div className="relative" onClick={(e) => e.stopPropagation()}>
-                <button 
-                  onClick={() => setMenuOpen(!menuOpen)} 
-                  className={`p-2 rounded-full transition-colors ${menuOpen ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:bg-gray-50'}`}
-                >
+                <button onClick={() => setMenuOpen(!menuOpen)} className={`p-2 rounded-full transition-colors ${menuOpen ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:bg-gray-50'}`}>
                   <FiMoreVertical size={20} />
                 </button>
-
                 {menuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl py-1.5 z-50 border border-gray-100 animate-fadeIn origin-top-right">
-                    
-                    {/* EDIT (Common) */}
-                    <button 
-                      onClick={() => { setIsEditing(true); setMenuOpen(false); }} 
-                      className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3"
-                    >
+                    <button onClick={() => { setIsEditing(true); setMenuOpen(false); }} className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3">
                       <FiEdit3 className="text-blue-500" size={16}/> Edit Story
                     </button>
-
-                    <div className="h-px bg-gray-100 my-0.5"></div>
-
-                    {/* OWNER OPTIONS */}
                     {isOwner && (
-                      <button 
-                        onClick={() => { fetchVersions(); setMenuOpen(false); }} 
-                        className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3"
-                      >
+                      <button onClick={() => { fetchVersions(); setMenuOpen(false); }} className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-3">
                         <FiClock className="text-orange-500" size={16}/> View History
                       </button>
                     )}
-
-                    {/* NON-OWNER (Tagged) OPTIONS */}
                     {!isOwner && isTagged && (
-                      <button 
-                        onClick={promptSelfUntag} 
-                        className="w-full text-left px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 flex items-center gap-3"
-                      >
+                      <button onClick={promptSelfUntag} className="w-full text-left px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 flex items-center gap-3">
                         <FiTrash2 size={16}/> Remove Tag
                       </button>
                     )}
-
                   </div>
                 )}
               </div>
@@ -287,21 +251,58 @@ export default function StoryView({ initialEditMode = false }) {
         )}
       </div>
 
-      {/* MEDIA GALLERY */}
-      <div className="relative bg-black aspect-video md:aspect-[16/9] flex items-center justify-center overflow-hidden">
+      {/* 🟢 UPDATED MEDIA GALLERY WITH ARROWS */}
+      <div className="relative bg-black aspect-video md:aspect-[16/9] flex items-center justify-center overflow-hidden group">
         {memory.media && memory.media.length > 0 ? (
            <>
+             {/* Main Content */}
              {isVideo(memory.media[activeMediaIndex]) ? (
-                <video src={memory.media[activeMediaIndex].url} controls className="w-full h-full object-contain" />
+                <video 
+                  key={memory.media[activeMediaIndex].url}
+                  src={memory.media[activeMediaIndex].url} 
+                  controls 
+                  className="w-full h-full object-contain" 
+                />
              ) : (
-                <img src={memory.media[activeMediaIndex].url} alt="Memory" className="w-full h-full object-contain"/>
+                <img 
+                  src={memory.media[activeMediaIndex].url} 
+                  alt="Memory" 
+                  className="w-full h-full object-contain select-none"
+                />
              )}
+
+             {/* Navigation Arrows (Visible on hover) */}
              {memory.media.length > 1 && (
-               <div className="absolute bottom-4 flex justify-center gap-2 z-10 w-full">
-                 {memory.media.map((_, idx) => (
-                   <button key={idx} onClick={() => setActiveMediaIndex(idx)} className={`w-2 h-2 rounded-full transition-all ${idx === activeMediaIndex ? "bg-white scale-125" : "bg-white/40"}`}/>
-                 ))}
-               </div>
+               <>
+                 <button 
+                   onClick={(e) => { e.stopPropagation(); prevMedia(); }}
+                   className="absolute left-4 p-2 rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-md transition-all opacity-0 group-hover:opacity-100"
+                 >
+                   <FiChevronLeft size={32} />
+                 </button>
+                 <button 
+                   onClick={(e) => { e.stopPropagation(); nextMedia(); }}
+                   className="absolute right-4 p-2 rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-md transition-all opacity-0 group-hover:opacity-100"
+                 >
+                   <FiChevronRight size={32} />
+                 </button>
+
+                 {/* Pagination Dots */}
+                 <div className="absolute bottom-4 flex justify-center gap-2 z-10 w-full">
+                   {memory.media.map((_, idx) => (
+                     <button 
+                       key={idx} 
+                       onClick={() => setActiveMediaIndex(idx)} 
+                       className={`w-2 h-2 rounded-full transition-all ${idx === activeMediaIndex ? "bg-white scale-125" : "bg-white/40"}`}
+                     />
+                   ))}
+                 </div>
+
+                 {/* Index Badge */}
+                 <div className="absolute top-4 right-4 px-2 py-1 bg-black/50 text-white text-[10px] rounded-md backdrop-blur-sm">
+                   {activeMediaIndex + 1} / {memory.media.length}
+                 </div>
+               </>
              )}
            </>
         ) : (
@@ -314,8 +315,8 @@ export default function StoryView({ initialEditMode = false }) {
         <div>
           {isEditing ? (
             <div className="space-y-4 animate-fadeIn">
-              <input type="text" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full text-2xl font-bold border-b border-gray-300 focus:border-blue-500 focus:outline-none py-2 placeholder-gray-300 transition-colors" placeholder="Story Title"/>
-              <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full min-h-[150px] p-4 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all resize-y" placeholder="Write your story..."/>
+              <input type="text" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full text-2xl font-bold border-b border-gray-300 focus:border-blue-500 focus:outline-none py-2 transition-colors" placeholder="Story Title"/>
+              <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full min-h-[150px] p-4 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all" placeholder="Write your story..."/>
             </div>
           ) : (
             <>
@@ -357,28 +358,18 @@ export default function StoryView({ initialEditMode = false }) {
 
                 <div className="flex flex-wrap gap-2">
                   {(isEditing ? formData.taggedPersons : memory.taggedPersons).map((p, index) => {
-                    // Can remove if Owner OR Self
-                    const canRemove = isEditing && (
-                        isOwner || 
-                        (p.user?._id === currentUserId) || 
-                        (p.user === currentUserId)
-                    );
-
+                    const canRemove = isEditing && (isOwner || (p.user?._id === currentUserId) || (p.user === currentUserId));
                     return (
                         <span key={p._id || index} className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-white text-gray-700 shadow-sm border border-indigo-100">
                         {p.name || "Unknown"}
                         {canRemove && (
-                            <button 
-                                onClick={() => handleRemoveTag(p._id)}
-                                className="ml-1 p-0.5 rounded-full hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors"
-                            >
+                            <button onClick={() => handleRemoveTag(p._id)} className="ml-1 p-0.5 rounded-full hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors">
                                 <FiX size={12}/>
                             </button>
                         )}
                         </span>
                     );
                   })}
-                  {isEditing && formData.taggedPersons.length === 0 && <span className="text-xs text-gray-400 italic">No one tagged</span>}
                 </div>
               </div>
             </div>
