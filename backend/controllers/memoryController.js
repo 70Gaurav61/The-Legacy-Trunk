@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import Person from "../models/Person.js";
 import MemoryVersion from "../models/MemoryVersion.js"; 
 import { createNotification } from "../utiles/notificationService.js";
+import s3 from "../config/aws.js"; 
 
 // ========================================================
 // 🟢 CREATE MEMORY
@@ -258,24 +259,41 @@ export const updateMemory = async (req, res) => {
 // ========================================================
 // 🟢 DELETE MEMORY
 // ========================================================
+
 export const deleteMemory = async (req, res) => {
   try {
-    const memory = req.memory; 
+    const memory = req.memory; // Attached by middleware
 
     if (memory.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Only the author can delete this memory." });
     }
 
-    await memory.deleteOne(); 
-    await MemoryVersion.deleteMany({ memory: memory._id });
+    // 1.  Remove files from AWS S3 if they exist
+    if (memory.media && memory.media.length > 0) {
+      const deleteParams = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Delete: {
+          Objects: memory.media.map((item) => {
+            // Extract the filename (Key) from the end of the URL
+            const fileKey = item.url.split("/").pop(); 
+            return { Key: fileKey };
+          }),
+        },
+      };
 
-    res.json({ message: "Memory deleted successfully" });
+      await s3.deleteObjects(deleteParams).promise(); //
+    }
+
+    // 2.  Continue existing database cleanup
+    await memory.deleteOne(); //
+    await MemoryVersion.deleteMany({ memory: memory._id }); //
+
+    res.json({ message: "Memory and associated files deleted successfully" });
   } catch (err) {
     console.error("Delete Error:", err);
     res.status(500).json({ message: "Server error during deletion" });
   }
 };
-
 // ... sendMemoryNotifications function remains the same ...
 // You can keep the notification logic as it was, 
 // just ensure you import Person and User correctly.
