@@ -1,6 +1,7 @@
 import Memory from "../models/Memory.js";
 import User from "../models/User.js";
 import Person from "../models/Person.js";
+import ScheduledMessage from "../models/ScheduledMessage.js";
 import MemoryVersion from "../models/MemoryVersion.js"; 
 import { createNotification } from "../utiles/notificationService.js";
 
@@ -36,7 +37,7 @@ export const createMemory = async (req, res) => {
 };
 
 // ========================================================
-// 🟢 READ MEMORIES (Feed/Search) - FIXED FOR SCHEMA
+// 🟢 READ MEMORIES (Feed/Search) - With Auto-Publish Capsules
 // ========================================================
 export const getMemories = async (req, res) => {
   try {
@@ -44,24 +45,90 @@ export const getMemories = async (req, res) => {
     const familyId = req.params.familyId; 
     const currentUserId = req.user._id;
 
+    // ---------------------------------------------------------
+    // ⚡ AUTO-PUBLISH DUE CAPSULES
+    // ---------------------------------------------------------
+    // Check for capsules that are due AND not delivered
+    const dueCapsules = await ScheduledMessage.find({
+       family: familyId,
+       delivered: false,
+       deliverAt: { $lte: new Date() } // Date is now or in the past
+    }).populate("author", "username"); // 🟢 1. Populate to get author name for notification
+
+    if (dueCapsules.length > 0) {
+       console.log(`🚀 Unearthing ${dueCapsules.length} time capsules...`);
+       
+       // Prepare Memory Objects
+       const newMemories = dueCapsules.map(cap => ({
+          family: cap.family,
+          author: cap.author._id, // 🟢 Use _id because cap.author is now an object
+          title: "⏳ Time Capsule Unlocked", 
+          description: cap.content || "A memory from the past...", 
+          media: cap.attachments.map(a => ({ 
+              url: a.url, 
+              mimeType: a.mimeType,
+              size: 0 
+          })),
+          date: new Date(),     
+          visibility: 'family', 
+          tags: ['Time Capsule']
+       }));
+
+       // 🟢 2. Capture the created memories
+       const createdMemories = await Memory.insertMany(newMemories);
+
+       // Mark Capsules as Delivered
+       await ScheduledMessage.updateMany(
+          { _id: { $in: dueCapsules.map(c => c._id) } },
+          { $set: { delivered: true } }
+       );
+
+       // 🟢 3. 🔔 SEND NOTIFICATIONS
+       const familyMembers = await User.find({ families: familyId });
+
+       // Loop through each new memory/capsule pair
+       for (let i = 0; i < createdMemories.length; i++) {
+          const memory = createdMemories[i];
+          const capsule = dueCapsules[i]; 
+          const authorName = capsule.author.username;
+
+          // Notify each family member
+          for (const member of familyMembers) {
+             const isAuthor = member._id.toString() === capsule.author._id.toString();
+
+             await createNotification({
+                recipient: member._id,
+                sender: capsule.author._id,
+                type: 'memory_create', // Clicking this should open the memory
+                payload: {
+                   memoryId: memory._id,
+                   message: isAuthor 
+                     ? "Your time capsule has finally opened!" 
+                     : `A time capsule from ${authorName} has opened!`
+                }
+             });
+          }
+       }
+    }
+    // ---------------------------------------------------------
+    // END OF AUTO-PUBLISH & NOTIFY
+    // ---------------------------------------------------------
+
     // Base Query
     let query = { family: familyId };
 
     // ---------------------------------------------------------
-    // 🛡️ STRICT VISIBILITY FILTER (Schema Based)
+    // 🛡️ STRICT VISIBILITY FILTER
     // ---------------------------------------------------------
     const visibilityFilter = {
       $or: [
-        { author: currentUserId },         // 1. Author always sees their own
-        { visibility: 'family' },          // 2. 'family' = Public to the family
-        { visibility: { $exists: false } },// 3. Default fallback
+        { author: currentUserId },         
+        { visibility: 'family' },          
+        { visibility: { $exists: false } },
         { 
-          // 4. SELECTED: Visible ONLY if current user is in 'sharedWith'
           visibility: 'selected',
           sharedWith: currentUserId 
         },
-        // (Optional) You might also want tagged people to see it automatically:
-        // { taggedPersons: { $in: [currentUserPersonId] } } 
       ]
     };
 
@@ -105,13 +172,11 @@ export const getMemories = async (req, res) => {
     // 👤 USER PROFILE VIEW
     // ---------------------------------------------------------
     else if (userId) {
-      // My Private Tab
       if (visibility === 'private' && userId === currentUserId.toString()) {
         query.author = currentUserId;
         query.visibility = 'private';
       } 
       else {
-        // Viewing someone else
         let targetPersonId;
         const targetUser = await User.findById(userId).select('primaryPerson');
         
@@ -134,7 +199,6 @@ export const getMemories = async (req, res) => {
           ]
         };
         
-        // Hide private items explicitly when viewing others
         if (userId !== currentUserId.toString()) {
           query.visibility = { $ne: 'private' };
         }
@@ -155,7 +219,7 @@ export const getMemories = async (req, res) => {
     const memories = await Memory.find(query)
       .populate("author", "username avatarUrl")
       .populate("taggedPersons", "name user") 
-      .populate("sharedWith", "username") // Populate sharedWith for debugging/frontend
+      .populate("sharedWith", "username") 
       .sort({ date: -1 });
 
     res.json(memories);

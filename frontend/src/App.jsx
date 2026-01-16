@@ -18,6 +18,7 @@ import PrivateGallery from "./pages/PrivateGallery";
 import StoryView from "./pages/StoryView";
 import Profile from "./pages/Profile";
 import Vault from "./components/Vault";
+import TimeCapsule from "./components/TimeCapsule";
 
 // 🟢 1. Create a Layout for standard pages (Restores the container look)
 const StandardLayout = () => (
@@ -69,6 +70,7 @@ export default function App() {
                 <Route path="/stories/:id" element={<StoryView />} />
                 <Route path="/stories/:id/edit" element={<StoryView initialEditMode={true} />} />
                 <Route path="/vault" element={<Vault />} />
+                <Route path="/time-capsule" element={<TimeCapsule />} />
               </>
             )}
           </Routes>
