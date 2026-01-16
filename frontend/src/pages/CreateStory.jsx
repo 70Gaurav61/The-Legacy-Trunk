@@ -19,9 +19,9 @@ export default function CreateStory() {
   const navigate = useNavigate();
   const familyId = useCurrentFamily();
   
-  // 🟢 Updated: Changed to arrays for multi-upload
   const [files, setFiles] = useState([]); 
   const [previews, setPreviews] = useState([]);
+  const [isDragging, setIsDragging] = useState(false); // 🟢 State for drag styling
   
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -29,10 +29,8 @@ export default function CreateStory() {
   
   const [visibility, setVisibility] = useState("family");
   const [sharedWith, setSharedWith] = useState([]); 
-  
   const [familyMembers, setFamilyMembers] = useState([]); 
   const [selectedTags, setSelectedTags] = useState([]); 
-  
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -47,18 +45,17 @@ export default function CreateStory() {
     fetchMembers();
   }, []);
 
-  // 🟢 Updated: Logic to handle multiple file selection
-  const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    if (selectedFiles.length > 0) {
-      // Limit to 5 files to match backend array limit if necessary
-      if (files.length + selectedFiles.length > 5) {
+  // 🟢 Helper to process files for both Click and Drag-and-Drop
+  const processFiles = (selectedFiles) => {
+    const fileList = Array.from(selectedFiles);
+    if (fileList.length > 0) {
+      if (files.length + fileList.length > 5) {
         return alert("You can only upload a maximum of 5 files.");
       }
 
-      setFiles(prev => [...prev, ...selectedFiles]);
+      setFiles(prev => [...prev, ...fileList]);
       
-      const newPreviews = selectedFiles.map(file => ({
+      const newPreviews = fileList.map(file => ({
         url: URL.createObjectURL(file),
         type: file.type
       }));
@@ -66,7 +63,26 @@ export default function CreateStory() {
     }
   };
 
-  // 🟢 Updated: Remove specific file from array
+  const handleFileChange = (e) => {
+    processFiles(e.target.files);
+  };
+
+  // 🟢 Drag and Drop Handlers
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    processFiles(e.dataTransfer.files);
+  };
+
   const removeFile = (index) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
     setPreviews(prev => prev.filter((_, i) => i !== index));
@@ -111,11 +127,8 @@ export default function CreateStory() {
         sharedWith.forEach(id => formData.append("sharedWith[]", id));
     }
 
-    // 🟢 Updated: Loop through files to append to 'media' field
     if (files.length > 0) {
       files.forEach(f => formData.append("media", f));
-      
-      // Use the first file to determine general mediaType
       const type = files[0].type.startsWith("video") ? "video" : "photo";
       formData.append("mediaType", type);
     } else {
@@ -146,8 +159,16 @@ export default function CreateStory() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          {/* 🟢 Updated: Horizontal Gallery for multiple previews */}
-          <div className={`border-2 border-dashed rounded-3xl min-h-96 flex flex-col items-center justify-center transition-all ${previews.length > 0 ? 'border-gray-300 bg-gray-50' : 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100'}`}>
+          <div 
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-3xl min-h-96 flex flex-col items-center justify-center transition-all ${
+              isDragging ? 'border-indigo-600 bg-indigo-100 scale-[1.02]' : // 🟢 Drag active style
+              previews.length > 0 ? 'border-gray-300 bg-gray-50' : 
+              'border-indigo-300 bg-indigo-50 hover:bg-indigo-100'
+            }`}
+          >
             {previews.length > 0 ? (
               <div className="w-full p-4 overflow-x-auto">
                 <div className="flex gap-4 pb-2">
@@ -162,7 +183,6 @@ export default function CreateStory() {
                     </div>
                   ))}
                   
-                  {/* Option to add more files if under limit */}
                   {files.length < 5 && (
                     <label className="flex-shrink-0 w-32 h-80 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-indigo-50 transition-colors">
                         <FiPlus className="text-indigo-400 mb-2" size={24} />
@@ -174,8 +194,12 @@ export default function CreateStory() {
               </div>
             ) : (
               <label className="cursor-pointer flex flex-col items-center p-8 w-full h-full justify-center">
-                <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4"><FiUploadCloud size={32} /></div>
-                <span className="text-lg font-semibold text-indigo-900">Click to upload photos or videos</span>
+                <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                  <FiUploadCloud size={32} className={isDragging ? 'animate-bounce' : ''}/>
+                </div>
+                <span className="text-lg font-semibold text-indigo-900">
+                  {isDragging ? "Drop to upload" : "Click or Drag to upload"}
+                </span>
                 <input type="file" className="hidden" onChange={handleFileChange} accept="image/*,video/*" multiple />
               </label>
             )}
