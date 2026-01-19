@@ -46,22 +46,22 @@ export const getMemories = async (req, res) => {
     const currentUserId = req.user._id;
 
     // ---------------------------------------------------------
-    // ⚡ AUTO-PUBLISH DUE CAPSULES
+    // ⚡ AUTO-PUBLISH DUE CAPSULES & NOTIFY
     // ---------------------------------------------------------
-    // Check for capsules that are due AND not delivered
+    // 1. Find capsules that are due (past deliverAt) AND not delivered yet
     const dueCapsules = await ScheduledMessage.find({
        family: familyId,
        delivered: false,
-       deliverAt: { $lte: new Date() } // Date is now or in the past
-    }).populate("author", "username"); // 🟢 1. Populate to get author name for notification
+       deliverAt: { $lte: new Date() } 
+    }).populate("author", "username"); 
 
     if (dueCapsules.length > 0) {
        console.log(`🚀 Unearthing ${dueCapsules.length} time capsules...`);
        
-       // Prepare Memory Objects
+       // 2. Prepare Memory Objects
        const newMemories = dueCapsules.map(cap => ({
           family: cap.family,
-          author: cap.author._id, // 🟢 Use _id because cap.author is now an object
+          author: cap.author._id, 
           title: "⏳ Time Capsule Unlocked", 
           description: cap.content || "A memory from the past...", 
           media: cap.attachments.map(a => ({ 
@@ -74,32 +74,30 @@ export const getMemories = async (req, res) => {
           tags: ['Time Capsule']
        }));
 
-       // 🟢 2. Capture the created memories
+       // 3. Insert into DB and Capture the created docs
        const createdMemories = await Memory.insertMany(newMemories);
 
-       // Mark Capsules as Delivered
+       // 4. Mark Capsules as Delivered
        await ScheduledMessage.updateMany(
           { _id: { $in: dueCapsules.map(c => c._id) } },
           { $set: { delivered: true } }
        );
 
-       // 🟢 3. 🔔 SEND NOTIFICATIONS
+       // 5. 🔔 SEND NOTIFICATIONS
        const familyMembers = await User.find({ families: familyId });
 
-       // Loop through each new memory/capsule pair
        for (let i = 0; i < createdMemories.length; i++) {
           const memory = createdMemories[i];
           const capsule = dueCapsules[i]; 
           const authorName = capsule.author.username;
 
-          // Notify each family member
           for (const member of familyMembers) {
              const isAuthor = member._id.toString() === capsule.author._id.toString();
 
              await createNotification({
                 recipient: member._id,
                 sender: capsule.author._id,
-                type: 'memory_create', // Clicking this should open the memory
+                type: 'memory_create', 
                 payload: {
                    memoryId: memory._id,
                    message: isAuthor 
@@ -111,7 +109,7 @@ export const getMemories = async (req, res) => {
        }
     }
     // ---------------------------------------------------------
-    // END OF AUTO-PUBLISH & NOTIFY
+    // END OF AUTO-PUBLISH
     // ---------------------------------------------------------
 
     // Base Query
@@ -125,15 +123,12 @@ export const getMemories = async (req, res) => {
         { author: currentUserId },         
         { visibility: 'family' },          
         { visibility: { $exists: false } },
-        { 
-          visibility: 'selected',
-          sharedWith: currentUserId 
-        },
+        { visibility: 'selected', sharedWith: currentUserId },
       ]
     };
 
     // ---------------------------------------------------------
-    // 🔎 SEARCH
+    // 1. 🔎 SEARCH
     // ---------------------------------------------------------
     if (search) {
       const searchRegex = new RegExp(search, 'i'); 
@@ -169,43 +164,47 @@ export const getMemories = async (req, res) => {
     }
 
     // ---------------------------------------------------------
-    // 👤 USER PROFILE VIEW
+    // 2. 🔒 PRIVATE FILTER (✅ FIXED)
+    // ---------------------------------------------------------
+    // This MUST come before the 'userId' check to work correctly
+    else if (visibility === 'private') {
+      query.author = currentUserId;
+      query.visibility = 'private';
+    }
+
+    // ---------------------------------------------------------
+    // 3. 👤 USER PROFILE VIEW
     // ---------------------------------------------------------
     else if (userId) {
-      if (visibility === 'private' && userId === currentUserId.toString()) {
-        query.author = currentUserId;
-        query.visibility = 'private';
-      } 
-      else {
-        let targetPersonId;
-        const targetUser = await User.findById(userId).select('primaryPerson');
-        
-        if (targetUser?.primaryPerson) {
-          targetPersonId = targetUser.primaryPerson;
-        } else {
-          const linked = await Person.findOne({ user: userId }).select('_id');
-          if (linked) targetPersonId = linked._id;
-        }
+      let targetPersonId;
+      const targetUser = await User.findById(userId).select('primaryPerson');
+      
+      if (targetUser?.primaryPerson) {
+        targetPersonId = targetUser.primaryPerson;
+      } else {
+        const linked = await Person.findOne({ user: userId }).select('_id');
+        if (linked) targetPersonId = linked._id;
+      }
 
-        const userFilter = targetPersonId 
-          ? { $or: [{ author: userId }, { taggedPersons: targetPersonId }] }
-          : { author: userId };
+      const userFilter = targetPersonId 
+        ? { $or: [{ author: userId }, { taggedPersons: targetPersonId }] }
+        : { author: userId };
 
-        query = {
-          $and: [
-            query,
-            userFilter,
-            visibilityFilter
-          ]
-        };
-        
-        if (userId !== currentUserId.toString()) {
-          query.visibility = { $ne: 'private' };
-        }
+      query = {
+        $and: [
+          query,
+          userFilter,
+          visibilityFilter
+        ]
+      };
+      
+      // Hide private items explicitly when viewing others
+      if (userId !== currentUserId.toString()) {
+        query.visibility = { $ne: 'private' };
       }
     } 
     // ---------------------------------------------------------
-    // 🏠 DEFAULT FEED
+    // 4. 🏠 DEFAULT FEED
     // ---------------------------------------------------------
     else {
       query = {

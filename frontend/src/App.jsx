@@ -85,6 +85,7 @@ export default function App() {
             <Route path="/family-tree" element={<ProtectedRoute user={user}><TreePage /></ProtectedRoute>} />
             <Route path="/private" element={<ProtectedRoute user={user}><PrivateGallery /></ProtectedRoute>} />
             <Route path="/vault" element={<ProtectedRoute user={user}><Vault /></ProtectedRoute>} />
+            <Route path="/time-capsule" element={<ProtectedRoute user={user}><TimeCapsule /></ProtectedRoute>} />
             
             {/* Profile Routes */}
             <Route path="/profile" element={<ProtectedRoute user={user}><Profile /></ProtectedRoute>} />
