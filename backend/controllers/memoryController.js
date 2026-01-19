@@ -77,11 +77,19 @@ export const getMemories = async (req, res) => {
        // 3. Insert into DB and Capture the created docs
        const createdMemories = await Memory.insertMany(newMemories);
 
-       // 4. Mark Capsules as Delivered
-       await ScheduledMessage.updateMany(
-          { _id: { $in: dueCapsules.map(c => c._id) } },
-          { $set: { delivered: true } }
-       );
+       // 4. 🟢 UPDATE CAPSULES: Mark Delivered AND Link Memory ID
+       // We map 1:1 because createdMemories array order matches dueCapsules array order
+       const updates = dueCapsules.map((capsule, index) => {
+           return ScheduledMessage.findByIdAndUpdate(capsule._id, {
+               $set: { 
+                   delivered: true,
+                   memoryId: createdMemories[index]._id // 🟢 Critical: Link the memory!
+               }
+           });
+       });
+       
+       // Execute all updates in parallel
+       await Promise.all(updates);
 
        // 5. 🔔 SEND NOTIFICATIONS
        const familyMembers = await User.find({ families: familyId });
@@ -120,8 +128,8 @@ export const getMemories = async (req, res) => {
     // ---------------------------------------------------------
     const visibilityFilter = {
       $or: [
-        { author: currentUserId },         
-        { visibility: 'family' },          
+        { author: currentUserId },        
+        { visibility: 'family' },         
         { visibility: { $exists: false } },
         { visibility: 'selected', sharedWith: currentUserId },
       ]
@@ -164,9 +172,8 @@ export const getMemories = async (req, res) => {
     }
 
     // ---------------------------------------------------------
-    // 2. 🔒 PRIVATE FILTER (✅ FIXED)
+    // 2. 🔒 PRIVATE FILTER
     // ---------------------------------------------------------
-    // This MUST come before the 'userId' check to work correctly
     else if (visibility === 'private') {
       query.author = currentUserId;
       query.visibility = 'private';
@@ -198,7 +205,6 @@ export const getMemories = async (req, res) => {
         ]
       };
       
-      // Hide private items explicitly when viewing others
       if (userId !== currentUserId.toString()) {
         query.visibility = { $ne: 'private' };
       }

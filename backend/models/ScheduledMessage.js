@@ -6,6 +6,9 @@ const ScheduledSchema = new mongoose.Schema({
   deliverAt: { type: Date, required: true },
   content: String,
   attachments: [{ url: String, mimeType: String }],
-  delivered: { type: Boolean, default: false }
+  delivered: { type: Boolean, default: false },
+  // 🟢 NEW: Link to the created memory
+  memoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Memory" } 
 }, { timestamps: true });
+
 export default mongoose.model("ScheduledMessage", ScheduledSchema);

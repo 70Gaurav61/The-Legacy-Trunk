@@ -44,22 +44,22 @@ export const getScheduledMessages = async (req, res) => {
   try {
     const currentUserId = req.user._id;
 
-    // Just fetch the data. Do NOT update 'delivered' status here.
-    // The memoryController.js (Feed) will handle the unlocking.
     const messages = await ScheduledMessage.find({
-      family: req.family._id,
+      family: req.family._id, // Assumes isFamilyMember middleware sets req.family
       $or: [
-        { delivered: true },           // Already opened (and converted to memory)
-        { author: currentUserId }      // My pending capsules
+        { delivered: true },           // Everyone sees opened capsules
+        { author: currentUserId }      // Only I see my pending capsules
       ]
-    }).sort({ deliverAt: 1 });
+    })
+    .populate('memoryId', '_id') // 🟢 CRITICAL: Checks if the linked memory still exists
+    .sort({ delivered: 1, createdAt: -1 }); // 🟢 SORT: Pending first, then Newest first
 
     res.json(messages);
   } catch (err) {
+    console.error("Fetch Capsules Error:", err);
     res.status(500).json({ message: err.message });
   }
 };
-
 // ========================================================
 // 🟢 DELETE MESSAGE
 // ========================================================
@@ -70,7 +70,7 @@ export const deleteScheduledMessage = async (req, res) => {
 
     if (!message) return res.status(404).json({ message: "Capsule not found" });
 
-    // Only Author can delete
+    // Security Check: Only the author can delete
     if (message.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Unauthorized" });
     }
