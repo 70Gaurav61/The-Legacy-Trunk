@@ -5,20 +5,19 @@ import { useAuth } from "./services/useAuth";
 import Header from "./components/Header";
 import Home from "./pages/Home";
 import Join from "./pages/Join";
-
 import Create from "./pages/Create";
-
 import Circles from "./pages/Circles";
 import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
 import Choose from "./pages/Choose";
 import TreePage from "./pages/TreePage";
-import CreateStory from "./pages/CreateStory";
+import CreateStory from "./components/CreateStory";
 import PrivateGallery from "./pages/PrivateGallery";
 import StoryView from "./pages/StoryView";
 import Profile from "./pages/Profile";
 import Vault from "./components/Vault";
 import TimeCapsule from "./components/TimeCapsule";
+import CreatePost from "./pages/CreatePost";
 
 // Layout for public pages
 const StandardLayout = () => (
@@ -63,21 +62,19 @@ export default function App() {
 
             {/* 2. Public Routes */}
             <Route element={<StandardLayout />}>
-              <Route 
-                path="/auth/login" 
-                element={!user ? <Login /> : <Navigate to="/home" />} 
+              <Route
+                path="/auth/login"
+                element={!user ? <Login /> : <Navigate to="/home" />}
               />
-              <Route 
-                path="/auth/signup" 
-                element={!user ? <Signup /> : <Navigate to="/home" />} 
+              <Route
+                path="/auth/signup"
+                element={!user ? <Signup /> : <Navigate to="/home" />}
               />
             </Route>
 
             {/* 3. Private Routes - Always defined, but access is controlled */}
             <Route path="/home" element={<ProtectedRoute user={user}><Home /></ProtectedRoute>} />
-            
             <Route path="/create" element={<ProtectedRoute user={user}><Create /></ProtectedRoute>} />
-            
             <Route path="/circles" element={<ProtectedRoute user={user}><Circles /></ProtectedRoute>} />
             <Route path="/choose" element={<ProtectedRoute user={user}><Choose /></ProtectedRoute>} />
             <Route path="/join" element={<ProtectedRoute user={user}><Join /></ProtectedRoute>} />
@@ -86,16 +83,17 @@ export default function App() {
             <Route path="/private" element={<ProtectedRoute user={user}><PrivateGallery /></ProtectedRoute>} />
             <Route path="/vault" element={<ProtectedRoute user={user}><Vault /></ProtectedRoute>} />
             <Route path="/time-capsule" element={<ProtectedRoute user={user}><TimeCapsule /></ProtectedRoute>} />
-            
+            <Route path="/create-post" element={<ProtectedRoute user={user}><CreatePost /></ProtectedRoute>} />
+
             {/* Profile Routes */}
             <Route path="/profile" element={<ProtectedRoute user={user}><Profile /></ProtectedRoute>} />
             <Route path="/profile/:id" element={<ProtectedRoute user={user}><Profile /></ProtectedRoute>} />
-            
+
             {/* Story View Routes */}
             <Route path="/stories/:id" element={<ProtectedRoute user={user}><StoryView /></ProtectedRoute>} />
-            <Route 
-              path="/stories/:id/edit" 
-              element={<ProtectedRoute user={user}><StoryView initialEditMode={true} /></ProtectedRoute>} 
+            <Route
+              path="/stories/:id/edit"
+              element={<ProtectedRoute user={user}><StoryView initialEditMode={true} /></ProtectedRoute>}
             />
 
             {/* 4. Catch-all for undefined routes */}
