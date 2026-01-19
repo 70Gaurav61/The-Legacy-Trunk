@@ -5,9 +5,9 @@ import { useAuth } from "./services/useAuth";
 import Header from "./components/Header";
 import Home from "./pages/Home";
 import Join from "./pages/Join";
-import Stories from "./pages/Stories";
+
 import Create from "./pages/Create";
-import TimelinePage from "./pages/TimelinePage";
+
 import Circles from "./pages/Circles";
 import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
@@ -75,9 +75,9 @@ export default function App() {
 
             {/* 3. Private Routes - Always defined, but access is controlled */}
             <Route path="/home" element={<ProtectedRoute user={user}><Home /></ProtectedRoute>} />
-            <Route path="/stories" element={<ProtectedRoute user={user}><Stories /></ProtectedRoute>} />
+            
             <Route path="/create" element={<ProtectedRoute user={user}><Create /></ProtectedRoute>} />
-            <Route path="/timeline" element={<ProtectedRoute user={user}><TimelinePage /></ProtectedRoute>} />
+            
             <Route path="/circles" element={<ProtectedRoute user={user}><Circles /></ProtectedRoute>} />
             <Route path="/choose" element={<ProtectedRoute user={user}><Choose /></ProtectedRoute>} />
             <Route path="/join" element={<ProtectedRoute user={user}><Join /></ProtectedRoute>} />
