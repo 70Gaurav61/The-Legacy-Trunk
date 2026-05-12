@@ -32,3 +32,27 @@ export const upload = multer({
   fileFilter,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
+
+//upload for private storage
+export const uploadVault = multer({
+  storage: multerS3({
+    s3,
+    bucket: bucketName,
+    acl: "private", // 🔒 important
+
+    metadata: (req, file, cb) => {
+      cb(null, {
+        fieldName: file.fieldname,
+        owner: req.user._id.toString(),
+      });
+    },
+
+    key: (req, file, cb) => {
+      const filename = `vaults/${req.user._id}/${Date.now()}-${file.originalname}`;
+      cb(null, filename);
+    },
+  }),
+
+  fileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
