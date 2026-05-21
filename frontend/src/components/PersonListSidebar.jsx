@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../services/useAuth.jsx"; 
 import { FiShare2, FiSearch, FiCopy, FiCheck, FiX, FiLink } from "react-icons/fi"; // 🟢 Added FiLink
+import Toast from "../components/ui/Toast";
 
 export default function PersonListSidebar() {
   const [persons, setPersons] = useState([]);
@@ -10,22 +11,23 @@ export default function PersonListSidebar() {
   // Share Data now holds the full link
   const [shareData, setShareData] = useState(null); 
   const [copied, setCopied] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
+    const fetchManagedPersons = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get("/persons/managed");
+        setPersons(res.data);
+      } catch (err) {
+        console.error("Failed to load sidebar list", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchManagedPersons();
   }, []);
-
-  const fetchManagedPersons = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get("/persons/managed");
-      setPersons(res.data);
-    } catch (err) {
-      console.error("Failed to load sidebar list", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleGenerateLink = async (personId, personName) => {
     try {
@@ -41,7 +43,7 @@ export default function PersonListSidebar() {
       setCopied(false);
     } catch (err) {
       console.error(err);
-      alert("Could not generate link.");
+      setToast({message: "Could not generate link.", type: "error"});
     }
   };
 
@@ -59,6 +61,7 @@ export default function PersonListSidebar() {
 
   return (
     <div className="w-80 h-full bg-white border-l border-gray-200 flex flex-col shadow-xl z-30 flex-shrink-0">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       
       {/* Header */}
       <div className="p-5 border-b border-gray-100">

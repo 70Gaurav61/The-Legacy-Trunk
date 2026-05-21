@@ -1,21 +1,21 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * A page component shown after successful signup, offering options to
  * create a new family or join an existing one.
  */
 const Choose = () => {
-    // You would typically navigate to different routes based on the user's choice
+    const navigate = useNavigate();
+
     const handleCreateFamily = () => {
         console.log('Navigating to Create Family page...');
-        // Example: router.push('/create-family');
-        alert('Navigating to Create Family...');
+        navigate('/create-family');
     };
 
     const handleJoinFamily = () => {
         console.log('Navigating to Join Family page...');
-        // Example: router.push('/join-family');
-        alert('Navigating to Join Family...');
+        navigate('/join-family');
     };
 
     return (
