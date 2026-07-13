@@ -15,6 +15,7 @@ import CreateStory from "./components/CreateStory";
 import PrivateGallery from "./pages/PrivateGallery";
 import StoryView from "./pages/StoryView";
 import Profile from "./pages/Profile";
+import PersonProfile from "./pages/PersonProfile";
 import Vault from "./components/Vault";
 import TimeCapsule from "./components/TimeCapsule";
 import CreatePost from "./pages/CreatePost";
@@ -88,6 +89,7 @@ export default function App() {
             {/* Profile Routes */}
             <Route path="/profile" element={<ProtectedRoute user={user}><Profile /></ProtectedRoute>} />
             <Route path="/profile/:id" element={<ProtectedRoute user={user}><Profile /></ProtectedRoute>} />
+            <Route path="/person/:id" element={<ProtectedRoute user={user}><PersonProfile /></ProtectedRoute>} />
 
             {/* Story View Routes */}
             <Route path="/stories/:id" element={<ProtectedRoute user={user}><StoryView /></ProtectedRoute>} />

@@ -1,7 +1,8 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { FiPlus, FiChevronUp, FiChevronDown } from "react-icons/fi";
 
-const renderPersonCircle = ({ person, isMale, partnerId, partnerName, user, focalId, onAddParent, onAddSpouse }) => {
+const renderPersonCircle = ({ person, isMale, partnerId, partnerName, user, focalId, onAddParent, onAddSpouse, navigate }) => {
   const present = !!person?.name;
   const isMe = user?.primaryPerson === person._id;
   const isFocal = person._id === focalId; 
@@ -50,7 +51,13 @@ const renderPersonCircle = ({ person, isMale, partnerId, partnerName, user, foca
           ${borderColor}
           ${ringEffect}
           ${textColor}
+          ${present ? 'cursor-pointer' : ''}
         `}
+        onClick={(e) => {
+          if (!present) return;
+          e.stopPropagation();
+            navigate(`/person/${person._id}`);
+        }}
       >
         {person.avatarUrl ? (
           <img src={person.avatarUrl} alt={person.name} className="w-full h-full object-cover" />
@@ -78,18 +85,18 @@ const renderPersonCircle = ({ person, isMale, partnerId, partnerName, user, foca
         )}
       </div>
       
-      {isMe && (
+            {isMe && (
           <span className="absolute -top-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-lg z-20 tracking-wide">
               YOU
           </span>
       )}
 
       <div className="mt-2 text-center">
-          {present ? (
+            {present ? (
              <>
-               <div className={`text-xs font-bold leading-tight ${isMe ? "text-yellow-700" : "text-gray-800"}`}>
-                  {person.name}
-               </div>
+           <div className={`text-xs font-bold leading-tight ${isMe ? "text-yellow-700" : "text-gray-800"}`}>
+             {person.name}
+           </div>
                <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mt-0.5">
                   {isMale ? "Male" : "Female"}
                </div>
@@ -107,6 +114,7 @@ export default function TreeNode({ node, user, focalId, onAddParent, onAddChild,
   
   const attachChildId = node.male._id || node.female._id;
   const attachChildName = node.male.name || node.female.name;
+  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col items-center relative min-w-[200px] mx-6">
@@ -114,11 +122,11 @@ export default function TreeNode({ node, user, focalId, onAddParent, onAddChild,
       <div className="relative group">
           <div className="flex items-center space-x-6 px-6 py-4 bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300 z-10 relative">
               
-              {renderPersonCircle({ person: node.male, isMale: true, partnerId: node.female?._id, partnerName: node.female?.name, user, focalId, onAddParent, onAddSpouse })}
+              {renderPersonCircle({ person: node.male, isMale: true, partnerId: node.female?._id, partnerName: node.female?.name, user, focalId, onAddParent, onAddSpouse, navigate })}
               
               <div className="h-10 w-px bg-gradient-to-b from-gray-100 via-gray-300 to-gray-100"></div>
               
-              {renderPersonCircle({ person: node.female, isMale: false, partnerId: node.male?._id, partnerName: node.male?.name, user, focalId, onAddParent, onAddSpouse })}
+              {renderPersonCircle({ person: node.female, isMale: false, partnerId: node.male?._id, partnerName: node.male?.name, user, focalId, onAddParent, onAddSpouse, navigate })}
           
           </div>
 

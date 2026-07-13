@@ -9,6 +9,7 @@ import {
   getFullTree,    
   generateClaimCode,
   getManagedPersons, 
+  getPersonProfile
 } from "../controllers/personController.js";
 import { verifyAuth } from "../middlewares/auth/verifyAuth.js";
 import { isFamilyMember } from "../middlewares/access/isFamilyMember.js";
@@ -51,5 +52,8 @@ router.get("/tree/ancestors/:personId", verifyAuth, isFamilyMember, getAncestors
 // Update/Delete
 router.put("/:personId", verifyAuth, isFamilyMember, updatePerson);
 router.delete("/:personId", verifyAuth, isFamilyMember, deletePerson);
+
+// Public view for person entries (profile + tagged memories)
+router.get("/profile/:personId", verifyAuth, getPersonProfile);
 
 export default router;

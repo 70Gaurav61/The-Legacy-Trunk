@@ -10,8 +10,8 @@ import TreeControls from "./TreeControls";
 const transformToTree = (person) => {
   if (!person) return null;
   const isMale = person.gender === "male";
-  const mainNode = { name: person.name, avatarUrl: person.avatarUrl, _id: person._id };
-  const spouseNode = person.spouse ? { name: person.spouse.name, avatarUrl: person.spouse.avatarUrl, _id: person.spouse._id } : { name: null };
+  const mainNode = { name: person.name, avatarUrl: person.avatarUrl, _id: person._id, user: person.user || null, isClaimed: person.isClaimed || false };
+  const spouseNode = person.spouse ? { name: person.spouse.name, avatarUrl: person.spouse.avatarUrl, _id: person.spouse._id, user: person.spouse.user || null, isClaimed: person.spouse.isClaimed || false } : { name: null };
   return {
     id: person._id, 
     male: isMale ? mainNode : spouseNode,
