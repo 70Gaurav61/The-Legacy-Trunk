@@ -40,7 +40,7 @@ export default function Header() {
       
       {/* 1. Logo */}
       <div className="flex items-center gap-2">
-        <Link to="/home" className="text-xl font-bold text-indigo-900 tracking-tight">
+        <Link to={user ? "/home" : "/"} className="text-xl font-bold text-indigo-900 tracking-tight">
           Legacy Trunk
         </Link>
       </div>

@@ -16,6 +16,7 @@ import PrivateGallery from "./pages/PrivateGallery";
 import StoryView from "./pages/StoryView";
 import Profile from "./pages/Profile";
 import PersonProfile from "./pages/PersonProfile";
+import Landing from "./pages/Landing";
 import Vault from "./components/Vault";
 import TimeCapsule from "./components/TimeCapsule";
 import CreatePost from "./pages/CreatePost";
@@ -58,7 +59,7 @@ export default function App() {
             {/* 1. Root Redirect */}
             <Route
               path="/"
-              element={user ? <Navigate to="/home" /> : <Navigate to="/auth/login" />}
+              element={user ? <Navigate to="/home" /> : <Landing />}
             />
 
             {/* 2. Public Routes */}
