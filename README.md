@@ -15,19 +15,6 @@ By leveraging modern web technologies, AI-driven tools, and collaborative featur
 
 ---
 
-## Team Information
-
-**Event:** WEBSTER 2025  
-**Team Name:** Team LegacyBuilder  
-**Team ID:** 941
-
-| Member            | Roll No. | Department |
-| :---------------- | :------: | :--------- |
-| **Gaurav Mahor**  | 20233127 | CSE        |
-| **Ashish Gautam** | 20233086 | CSE        |
-| **Devesh**        | 20233115 | CSE        |
-
----
 
 ## Process Flow
 
