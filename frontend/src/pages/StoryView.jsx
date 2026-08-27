@@ -202,13 +202,13 @@ export default function StoryView({ initialEditMode = false }) {
           <button onClick={() => navigate(-1)} className="p-2 -ml-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
             <FiArrowLeft size={24} />
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate(`/profile/${memory.author?._id}`)}>
             <img 
               src={memory.author?.avatarUrl || `https://ui-avatars.com/api/?name=${memory.author?.username || 'User'}&background=random`} 
               alt="" className="w-10 h-10 rounded-full border border-gray-200"
             />
             <div>
-               <h1 className="text-sm font-bold text-gray-800">{memory.author?.username || "Unknown Author"}</h1>
+               <h1 className="text-sm font-bold text-gray-800 hover:underline">{memory.author?.username || "Unknown Author"}</h1>
                <p className="text-xs text-gray-500">{new Date(memory.date).toLocaleDateString()}</p>
             </div>
           </div>

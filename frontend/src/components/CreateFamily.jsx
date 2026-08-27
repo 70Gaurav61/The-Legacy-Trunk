@@ -1,26 +1,32 @@
 import React, { useState } from 'react';
 import { FaUsers, FaTag, FaLock } from 'react-icons/fa'; // Icons for the form fields
+import { useNavigate } from 'react-router-dom';
+import Toast from "../components/ui/Toast";
 
 /**
  * Component for creating a new Family Unit.
  * Gathers essential details like name, type, and privacy.
  */
 const CreateFamily = () => {
+    const navigate = useNavigate();
     const [familyName, setFamilyName] = useState('');
     const [familyType, setFamilyType] = useState('nuclear'); // e.g., 'nuclear', 'extended', 'friends'
     const [isPrivate, setIsPrivate] = useState(true);
+    const [toast, setToast] = useState(null);
 
     const handleCreate = (e) => {
         e.preventDefault();
         // Add your API call/logic here to submit the new family data
         console.log('Creating Family:', { familyName, familyType, isPrivate });
-        alert(`Family "${familyName}" is being created!`);
+        setToast({ message: `Family "${familyName}" is being created!`, type: "success" });
         // On success, navigate the user to the new family dashboard
+        setTimeout(() => navigate('/'), 2000);
     };
 
     return (
         // --- Main Container: Centered Layout ---
         <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
             
             {/* --- Creation Card --- */}
             <div className="bg-white p-8 md:p-10 rounded-xl shadow-2xl w-full max-w-lg">

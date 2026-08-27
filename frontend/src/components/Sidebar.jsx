@@ -8,7 +8,7 @@ export default function Sidebar() {
       
       {/* 3. Create Story Button */}
       <Link 
-        to="/create-story" 
+        to="/create-post" 
         className="group flex flex-col items-center justify-center p-8 border-2 border-dashed border-indigo-300 rounded-2xl bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-500 transition-all cursor-pointer text-center"
       >
         <div className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg mb-3 group-hover:scale-110 transition-transform">

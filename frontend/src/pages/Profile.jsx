@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { api } from "../services/useAuth";
+import { useNavigate, useParams } from "react-router-dom";
+import { api, useAuth } from "../services/useAuth";
 
 // Components
 import SettingsModal from "../components/SettingsModal";
@@ -12,6 +12,8 @@ import MemoriesFeed from "../components/MemoriesFeed";
 
 export default function Profile() {
   const navigate = useNavigate();
+  const { id: routeId } = useParams();
+  const { user: currentUser } = useAuth();
   
   // State
   const [user, setUser] = useState(null);
@@ -41,12 +43,23 @@ export default function Profile() {
   // Handlers
   const fetchProfileData = async () => {
     try {
-      const [profileRes, memoryRes] = await Promise.all([
-        api.get("/users/profile"),
-        api.get("/users/memories")
-      ]);
+      // If routeId is present and different from current user, load that user's public profile
+      let profileRes, memoryRes;
+      if (routeId && currentUser && routeId !== currentUser._id) {
+        [profileRes, memoryRes] = await Promise.all([
+          api.get(`/users/${routeId}`),
+          api.get(`/users/${routeId}/memories`)
+        ]);
+      } else {
+        [profileRes, memoryRes] = await Promise.all([
+          api.get("/users/profile"),
+          api.get("/users/memories")
+        ]);
+      }
+
       setUser(profileRes.data);
       setMemories(memoryRes.data);
+
       setFormData({
         username: profileRes.data.username || "",
         bio: profileRes.data.primaryPerson?.bio || "",
@@ -118,6 +131,8 @@ export default function Profile() {
 
   if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
 
+  const isOwner = !!(currentUser && (!routeId || routeId === currentUser._id));
+
   return (
     <div className="max-w-4xl mx-auto pb-20 animate-fadeIn relative min-h-screen bg-gray-50/50">
       
@@ -131,7 +146,7 @@ export default function Profile() {
         message="Are you sure? This cannot be undone."
       />
 
-      {showSettings && <SettingsModal user={user} onClose={() => setShowSettings(false)} onLogout={handleLogout}/>}
+      {showSettings && isOwner && <SettingsModal user={user} onClose={() => setShowSettings(false)} onLogout={handleLogout}/>}
 
       <ProfileHeader 
         user={user}
@@ -141,11 +156,12 @@ export default function Profile() {
         handleSave={handleSaveProfile}
         handleImageChange={handleImageChange}
         onOpenSettings={() => setShowSettings(true)}
+        isOwner={isOwner}
       />
 
       <div className="px-6 mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-1 space-y-6">
-           <UserInfoCard user={user} isEditing={isEditing} formData={formData} setFormData={setFormData} />
+            <UserInfoCard user={user} isEditing={isEditing && isOwner} formData={formData} setFormData={setFormData} />
         </div>
 
         <div className="md:col-span-2">
@@ -163,15 +179,15 @@ export default function Profile() {
            <MemoriesFeed 
              layout="grid" 
              memories={activeTab === "uploads" ? memories.myUploads : memories.taggedIn}
-             isOwner={activeTab === "uploads"} 
+             isOwner={isOwner && activeTab === "uploads"} 
              openMenuId={openMenuId}
              setOpenMenuId={setOpenMenuId}
              
              // 🟢 1. DELETE: Only if I am the owner (My Stories tab)
-             onDelete={activeTab === "uploads" ? promptDelete : null}
+             onDelete={isOwner && activeTab === "uploads" ? promptDelete : null}
              
              // 🟢 2. EDIT: ALWAYS allowed (My Stories OR Tagged In)
-             onEdit={handleEditMemory}
+             onEdit={isOwner ? handleEditMemory : null}
            />
         </div>
       </div>

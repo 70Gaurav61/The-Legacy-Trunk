@@ -1,8 +1,6 @@
-// src/components/Header.jsx
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { FiSearch, FiLock } from "react-icons/fi";
+import { FiSearch, FiLock, FiShield } from "react-icons/fi"; // 🟢 Added FiShield
 import { useAuth } from "../services/useAuth"; 
 import NotificationBell from "./NotificationBell";
 import ProfileAvatar from "./ProfileAvatar"; 
@@ -30,11 +28,9 @@ export default function Header() {
       e.preventDefault(); 
 
       if (searchTerm.trim()) {
-        // 🟢 FIX: Navigate to '/home', not '/'
-        // Your App.jsx redirects '/' -> '/home', which was deleting the search param.
         navigate(`/home?search=${encodeURIComponent(searchTerm)}`);
       } else {
-        navigate('/home'); // Clear search stays on /home
+        navigate('/home'); 
       }
     }
   };
@@ -44,7 +40,7 @@ export default function Header() {
       
       {/* 1. Logo */}
       <div className="flex items-center gap-2">
-        <Link to="/home" className="text-xl font-bold text-indigo-900 tracking-tight">
+        <Link to={user ? "/home" : "/"} className="text-xl font-bold text-indigo-900 tracking-tight">
           Legacy Trunk
         </Link>
       </div>
@@ -71,15 +67,30 @@ export default function Header() {
           <>
             <NotificationBell />
 
+            {/* 🟢 NEW: Secure Vault Link (Expands on Hover) */}
             <Link 
-              to="/private"
-              className="hidden md:flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-indigo-600 border-l pl-4 border-gray-200 transition-colors cursor-pointer group"
+              to="/vault"
+              className="hidden md:flex items-center gap-1 text-gray-500 hover:text-indigo-600 transition-all cursor-pointer group border-l pl-4 border-gray-200"
             >
-              <FiLock className="text-gray-400 group-hover:text-indigo-600" size={14} />
-              <span>My Private Story</span>
+              <FiShield size={18} className="group-hover:scale-110 transition-transform" />
+              <span className="max-w-0 overflow-hidden group-hover:max-w-[80px] transition-all duration-500 ease-in-out text-sm font-bold whitespace-nowrap opacity-0 group-hover:opacity-100">
+                My Vault
+              </span>
             </Link>
 
-            <div className="w-10 h-10 cursor-pointer hover:opacity-80 transition-opacity">
+            {/* 🟢 UPDATED: Private Story Link (Expands on Hover) */}
+            <Link 
+              to="/private"
+              className="hidden md:flex items-center gap-1 text-gray-500 hover:text-indigo-600 transition-all cursor-pointer group ml-1"
+            >
+              <FiLock size={18} className="group-hover:scale-110 transition-transform" />
+              <span className="max-w-0 overflow-hidden group-hover:max-w-[120px] transition-all duration-500 ease-in-out text-sm font-bold whitespace-nowrap opacity-0 group-hover:opacity-100">
+                Private Story
+              </span>
+            </Link>
+
+            {/* Avatar */}
+            <div className="w-10 h-10 cursor-pointer hover:opacity-80 transition-opacity ml-2">
                {ProfileAvatar ? <ProfileAvatar user={user} /> : (
                  <div className="w-full h-full rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold">
                     {user.username?.charAt(0).toUpperCase()}

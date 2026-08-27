@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiUploadCloud, FiX, FiUsers, FiCalendar, FiLock, FiType, FiEye, FiPlus } from "react-icons/fi";
+import { FiUsers, FiCalendar, FiLock, FiType, FiEye } from "react-icons/fi";
 import { api } from "../services/useAuth";
+import Toast from "../components/ui/Toast";
+import MediaUploader from "./MediaUploader";
 
 const useCurrentFamily = () => {
     const [familyId, setFamilyId] = useState(null);
@@ -34,6 +36,7 @@ export default function CreateStory() {
   const [selectedTags, setSelectedTags] = useState([]); 
   
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -46,31 +49,6 @@ export default function CreateStory() {
     };
     fetchMembers();
   }, []);
-
-  // 🟢 Updated: Logic to handle multiple file selection
-  const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    if (selectedFiles.length > 0) {
-      // Limit to 5 files to match backend array limit if necessary
-      if (files.length + selectedFiles.length > 5) {
-        return alert("You can only upload a maximum of 5 files.");
-      }
-
-      setFiles(prev => [...prev, ...selectedFiles]);
-      
-      const newPreviews = selectedFiles.map(file => ({
-        url: URL.createObjectURL(file),
-        type: file.type
-      }));
-      setPreviews(prev => [...prev, ...newPreviews]);
-    }
-  };
-
-  // 🟢 Updated: Remove specific file from array
-  const removeFile = (index) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
-    setPreviews(prev => prev.filter((_, i) => i !== index));
-  };
 
   const toggleTag = (personId) => {
     if (selectedTags.includes(personId)) {
@@ -90,11 +68,11 @@ export default function CreateStory() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!familyId) return alert("Family ID not found. Please refresh.");
-    if (files.length === 0 && !description) return alert("Please add a photo or a story text.");
+    if (!familyId) return setToast({message: "Family ID not found. Please refresh.", type: "error"});
+    if (files.length === 0 && !description) return setToast({message: "Please add a photo or a story text.", type: "error"});
 
     if (visibility === 'selected' && sharedWith.length === 0) {
-        return alert("Please select at least one person to share with.");
+        return setToast({message: "Please select at least one person to share with.", type: "error"});
     }
 
     setLoading(true);
@@ -129,7 +107,7 @@ export default function CreateStory() {
       navigate("/");
     } catch (err) {
       console.error("Upload failed", err);
-      alert("Failed to post story. Please try again.");
+      setToast({message: "Failed to post story. Please try again.", type: "error"});
     } finally {
       setLoading(false);
     }
@@ -139,6 +117,7 @@ export default function CreateStory() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Create a Story</h1>
         <p className="text-gray-500">Share memories with your family. (Up to 5 files)</p>
@@ -146,40 +125,7 @@ export default function CreateStory() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          {/* 🟢 Updated: Horizontal Gallery for multiple previews */}
-          <div className={`border-2 border-dashed rounded-3xl min-h-96 flex flex-col items-center justify-center transition-all ${previews.length > 0 ? 'border-gray-300 bg-gray-50' : 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100'}`}>
-            {previews.length > 0 ? (
-              <div className="w-full p-4 overflow-x-auto">
-                <div className="flex gap-4 pb-2">
-                  {previews.map((prev, index) => (
-                    <div key={index} className="relative flex-shrink-0 w-64 h-80 bg-black rounded-2xl overflow-hidden shadow-lg">
-                       {prev.type.startsWith("video") ? (
-                         <video src={prev.url} controls className="w-full h-full object-contain" />
-                       ) : (
-                         <img src={prev.url} alt="Preview" className="w-full h-full object-contain" />
-                       )}
-                      <button type="button" onClick={() => removeFile(index)} className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full backdrop-blur-sm transition-all"><FiX size={16} /></button>
-                    </div>
-                  ))}
-                  
-                  {/* Option to add more files if under limit */}
-                  {files.length < 5 && (
-                    <label className="flex-shrink-0 w-32 h-80 border-2 border-dashed border-indigo-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-indigo-50 transition-colors">
-                        <FiPlus className="text-indigo-400 mb-2" size={24} />
-                        <span className="text-xs font-bold text-indigo-400">Add More</span>
-                        <input type="file" className="hidden" onChange={handleFileChange} accept="image/*,video/*" multiple />
-                    </label>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <label className="cursor-pointer flex flex-col items-center p-8 w-full h-full justify-center">
-                <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4"><FiUploadCloud size={32} /></div>
-                <span className="text-lg font-semibold text-indigo-900">Click to upload photos or videos</span>
-                <input type="file" className="hidden" onChange={handleFileChange} accept="image/*,video/*" multiple />
-              </label>
-            )}
-          </div>
+          <MediaUploader files={files} setFiles={setFiles} previews={previews} setPreviews={setPreviews} maxFiles={5} setToast={setToast} />
           
           <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500">
             <div className="flex items-start gap-3">

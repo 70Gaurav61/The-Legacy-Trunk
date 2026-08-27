@@ -122,3 +122,49 @@ export const getUserMemories = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// ==========================================
+// 🟢 GET ANOTHER USER'S PUBLIC PROFILE
+// ==========================================
+export const getUserById = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId)
+      .populate("primaryPerson")
+      .populate("families", "name creator");
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Remove sensitive fields before returning
+    const safeUser = user.toObject();
+    delete safeUser.password;
+    delete safeUser.__v;
+
+    res.json(safeUser);
+  } catch (err) {
+    console.error("Get User By Id Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ==========================================
+// 🟢 GET MEMORIES FOR A SPECIFIC USER
+// ==========================================
+export const getUserMemoriesById = async (req, res) => {
+  try {
+    const targetUserId = req.params.id;
+
+    const myUploads = await Memory.find({ author: targetUserId })
+      .sort({ date: -1 })
+      .populate("author", "username avatarUrl");
+
+    // We cannot reliably determine Person id for another user here without exposing internals,
+    // so 'taggedIn' will be empty for other users (frontend does not depend on it strongly).
+    const taggedIn = [];
+
+    res.json({ myUploads, taggedIn });
+  } catch (err) {
+    console.error("Get User Memories By Id Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
