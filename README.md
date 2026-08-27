@@ -18,30 +18,48 @@ Whether you're mapping out your ancestry, sharing a memory from a recent holiday
 
 ---
 
-## Team Information
+## ✨ Features
 
-**Event:** WEBSTER 2025  
-**Team Name:** Team LegacyBuilder  
-**Team ID:** 941
+### Family Tree Management
+* **Generational Mapping**: Build a complete family tree by specifying relationships (parent, spouse, child, etc.).
+* **Smart Auto-generation**: The system automatically calculates generations based on the tree structure.
+* **Claim Codes**: Invite family members to claim their specific node in the family tree.
 
-| Member            | Roll No. | Department |
-| :---------------- | :------: | :--------- |
-| **Gaurav Mahor**  | 20233127 | CSE        |
-| **Ashish Gautam** | 20233086 | CSE        |
-| **Devesh**        | 20233115 | CSE        |
+### Memories & Stories
+* **Rich Story Creation**: Record and share text stories, photos, and videos.
+* **Tagging**: Tag specific family members in memories.
+* **Visibility Controls**: Keep memories private, share with selected members, or open them to the entire family circle.
+
+### Secure Vault
+* **Secondary Protection**: A dedicated, password-protected vault separate from general memories.
+* **Cloud Storage**: Highly secure file and heirloom storage backed by AWS S3.
+
+### Time Capsules
+* **Scheduled Messages**: Schedule messages or memories to be delivered to family members at a future date using background cron jobs.
+
+### User Management & Authentication
+* **Role-Based Access**: Granular roles (Creator, Admin, Member) within family groups.
+* **Authentication**: Secure JWT-based authentication with bcrypt password hashing.
 
 ---
 
-## Process Flow
+## 🏗️ System Architecture
 
-1. **User Authentication** – Secure, role-based login (grandparents, parents, kids).
-2. **Dashboard/Homepage** – Access the family trunk with quick links (Stories, Timeline, Photos, Circles).
-3. **Story Creation** – Upload text, audio, video, or photos; respond to memory prompts.
-4. **Timeline Building** – Map key family or life events chronologically.
-5. **Story Sharing** – Share with private circles of selected family members.
-6. **Search & Tagging** – AI-driven auto-tagging or manual search tags.
-7. **Collaboration** – Multiple contributors can refine or edit stories.
-8. **Export/Print** – Convert curated stories into PDF or book format.
+```mermaid
+flowchart TD
+    User -->|React / Vite| Frontend
+    Frontend -->|REST API / JWT| Backend
+    Backend -->|Mongoose| MongoDB[(MongoDB)]
+    Backend -->|AWS SDK| S3[AWS S3 Storage]
+    Backend -->|node-cron| Cron[Scheduled Tasks]
+```
+
+### Application Flow
+1. **User Authentication**: User logs in and receives an HTTP-only/secure JWT.
+2. **Family Selection**: User selects or joins a family group (via Family Code).
+3. **Data Retrieval**: Frontend fetches the family tree and memory feeds from the Express API.
+4. **Media Upload**: Media is sent to the backend, which securely pipes it to AWS S3 and returns the URL.
+5. **Scheduled Tasks**: A Node.js cron job runs in the background to check and deliver Time Capsules.
 
 ---
 
