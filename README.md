@@ -139,18 +139,6 @@ Here are some of the core API endpoints that power the application:
 
 ---
 
-## 📸 Screenshots
-
-> Add application screenshots here.
-
-### Dashboard / Memories Feed
-![Dashboard Placeholder](./screenshots/dashboard.png)
-
-### Family Tree View
-![Family Tree Placeholder](./screenshots/tree.png)
-
----
-
 ## 🧩 Challenges & Technical Decisions
 
 * **Rate Limiter**: Rate Limiter at the backend API endpoint.
