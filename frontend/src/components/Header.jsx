@@ -3,15 +3,23 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FiSearch, FiLock } from "react-icons/fi";
-import { useAuth } from "../services/useAuth"; 
+import { useAuth } from "../services/useAuth";
 import NotificationBell from "./NotificationBell";
-import ProfileAvatar from "./ProfileAvatar"; 
+import ProfileAvatar from "./ProfileAvatar";
 
 export default function Header() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [searchParams] = useSearchParams();
-  
+
+  const family = user?.families?.[0]; // for family-code in top-bar
+  // if (!family) {
+  //   console.log("family nahi pahuch rahi hai yaha tak");
+  // }
+
+  // console.log("USER FROM AUTH:", user);
+  // console.log("FAMILIES:", user?.families);
+
   // Initialize state from URL
   const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
 
@@ -27,7 +35,7 @@ export default function Header() {
 
   const handleSearch = (e) => {
     if (e.key === 'Enter') {
-      e.preventDefault(); 
+      e.preventDefault();
 
       if (searchTerm.trim()) {
         // 🟢 FIX: Navigate to '/home', not '/'
@@ -41,7 +49,7 @@ export default function Header() {
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-50">
-      
+
       {/* 1. Logo */}
       <div className="flex items-center gap-2">
         <Link to="/home" className="text-xl font-bold text-indigo-900 tracking-tight">
@@ -53,25 +61,65 @@ export default function Header() {
       {user && (
         <div className="flex-1 max-w-xl mx-8 relative hidden sm:block">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
-          <input 
-            type="text" 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)} 
-            onKeyDown={handleSearch} 
-            placeholder="Search users, stories, or dates (YYYY-MM-DD)..." 
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={handleSearch}
+            placeholder="Search users, stories, or dates (YYYY-MM-DD)..."
             className="w-full bg-gray-100 border-none rounded-full py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none"
           />
+        </div>
+      )}
+      {/* family code */}
+      {family && (
+        <div className="relative group">
+          <button
+            type="button"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100"
+          >
+            <span className="font-medium text-gray-700">
+              {family.name}
+            </span>
+            <span className="text-xs text-gray-400">▼</span>
+          </button>
+
+          <div className="absolute left-0 top-full w-64 bg-white border border-gray-200 rounded-xl shadow-lg p-4 hidden group-hover:block z-50">
+
+            <p className="text-xs text-gray-500">
+              Family Code
+            </p>
+
+            <div className="mt-1 flex items-center justify-between gap-2">
+              <p className="text-lg font-bold tracking-wider text-indigo-700">
+                {family.familyCode}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(family.familyCode);
+                }}
+                className="px-2 py-1 text-xs font-medium text-indigo-600
+                          border border-indigo-200 rounded-md
+                          hover:bg-indigo-50 transition-colors"
+              >
+                Copy
+              </button>
+            </div>
+
+          </div>
         </div>
       )}
 
       {/* 3. Right Actions */}
       <div className="flex items-center gap-4">
-        
+
         {user ? (
           <>
             <NotificationBell />
 
-            <Link 
+            <Link
               to="/private"
               className="hidden md:flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-indigo-600 border-l pl-4 border-gray-200 transition-colors cursor-pointer group"
             >
@@ -80,11 +128,11 @@ export default function Header() {
             </Link>
 
             <div className="w-10 h-10 cursor-pointer hover:opacity-80 transition-opacity">
-               {ProfileAvatar ? <ProfileAvatar user={user} /> : (
-                 <div className="w-full h-full rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold">
-                    {user.username?.charAt(0).toUpperCase()}
-                 </div>
-               )}
+              {ProfileAvatar ? <ProfileAvatar user={user} /> : (
+                <div className="w-full h-full rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold">
+                  {user.username?.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
 
             <button
