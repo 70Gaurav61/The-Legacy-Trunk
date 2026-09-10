@@ -1,12 +1,11 @@
 import Memory from "../models/Memory.js";
 import User from "../models/User.js";
 import Person from "../models/Person.js";
-import MemoryVersion from "../models/MemoryVersion.js"; 
+import MemoryVersion from "../models/MemoryVersion.js";
 import { createNotification } from "../utiles/notificationService.js";
+import { generateImageTags } from "../utiles/geminiService.js";
 
-// ========================================================
-// 🟢 CREATE MEMORY
-// ========================================================
+// CREATE MEMORY
 export const createMemory = async (req, res) => {
   try {
     const memoryData = {
@@ -15,15 +14,40 @@ export const createMemory = async (req, res) => {
       family: req.family._id,
       date: req.body.date || new Date(),
       // Ensure sharedWith is handled if sent
-      sharedWith: req.body.sharedWith || [] 
+      sharedWith: req.body.sharedWith || []
     };
 
     if (req.files?.length > 0) {
-      memoryData.media = req.files.map(file => ({
-        url: file.path, 
-        mimeType: file.mimetype,
-        size: file.size,
-      }));
+      // memoryData.media = req.files.map(file => ({
+      //   url: file.path,
+      //   mimeType: file.mimetype,
+      //   size: file.size,
+      // }));
+      memoryData.media = await Promise.all(
+        req.files.map(async (file) => {
+
+          let tags = [];
+
+          // Only send images to Gemini
+          if (file.mimetype.startsWith("image/")) {
+            try {
+              tags = await generateImageTags(file.path);
+            } catch (error) {
+              console.error(
+                `AI tagging failed for ${file.path}:`,
+                error.message
+              );
+            }
+          }
+
+          return {
+            url: file.path,
+            mimeType: file.mimetype,
+            size: file.size,
+            tags
+          };
+        })
+      );
     }
 
     const memory = await Memory.create(memoryData);
@@ -35,48 +59,43 @@ export const createMemory = async (req, res) => {
   }
 };
 
-// ========================================================
-// 🟢 READ MEMORIES (Feed/Search) - FIXED FOR SCHEMA
-// ========================================================
+
+// READ MEMORIES (Feed/Search)
 export const getMemories = async (req, res) => {
   try {
     const { userId, visibility, search } = req.query;
-    const familyId = req.params.familyId; 
+    const familyId = req.params.familyId;
     const currentUserId = req.user._id;
 
     // Base Query
     let query = { family: familyId };
 
-    // ---------------------------------------------------------
-    // 🛡️ STRICT VISIBILITY FILTER (Schema Based)
-    // ---------------------------------------------------------
+
+    // STRICT VISIBILITY FILTER (Schema Based)
     const visibilityFilter = {
       $or: [
         { author: currentUserId },         // 1. Author always sees their own
         { visibility: 'family' },          // 2. 'family' = Public to the family
         { visibility: { $exists: false } },// 3. Default fallback
-        { 
+        {
           // 4. SELECTED: Visible ONLY if current user is in 'sharedWith'
           visibility: 'selected',
-          sharedWith: currentUserId 
+          sharedWith: currentUserId
         },
-        // (Optional) You might also want tagged people to see it automatically:
-        // { taggedPersons: { $in: [currentUserPersonId] } } 
+
       ]
     };
 
-    // ---------------------------------------------------------
-    // 🔎 SEARCH
-    // ---------------------------------------------------------
+    // SEARCH
     if (search) {
-      const searchRegex = new RegExp(search, 'i'); 
+      const searchRegex = new RegExp(search, 'i');
       const [matchingUsers, matchingPersons] = await Promise.all([
         User.find({ username: searchRegex }).select('_id'),
         Person.find({ name: searchRegex, family: familyId }).select('_id')
       ]);
 
       const isDate = !isNaN(Date.parse(search));
-      
+
       const searchConditions = [
         { title: searchRegex },
         { description: searchRegex },
@@ -101,20 +120,18 @@ export const getMemories = async (req, res) => {
       };
     }
 
-    // ---------------------------------------------------------
-    // 👤 USER PROFILE VIEW
-    // ---------------------------------------------------------
+    // USER PROFILE VIEW
     else if (userId) {
       // My Private Tab
       if (visibility === 'private' && userId === currentUserId.toString()) {
         query.author = currentUserId;
         query.visibility = 'private';
-      } 
+      }
       else {
         // Viewing someone else
         let targetPersonId;
         const targetUser = await User.findById(userId).select('primaryPerson');
-        
+
         if (targetUser?.primaryPerson) {
           targetPersonId = targetUser.primaryPerson;
         } else {
@@ -122,7 +139,7 @@ export const getMemories = async (req, res) => {
           if (linked) targetPersonId = linked._id;
         }
 
-        const userFilter = targetPersonId 
+        const userFilter = targetPersonId
           ? { $or: [{ author: userId }, { taggedPersons: targetPersonId }] }
           : { author: userId };
 
@@ -133,16 +150,14 @@ export const getMemories = async (req, res) => {
             visibilityFilter
           ]
         };
-        
+
         // Hide private items explicitly when viewing others
         if (userId !== currentUserId.toString()) {
           query.visibility = { $ne: 'private' };
         }
       }
-    } 
-    // ---------------------------------------------------------
-    // 🏠 DEFAULT FEED
-    // ---------------------------------------------------------
+    }
+    // DEFAULT FEED
     else {
       query = {
         $and: [
@@ -154,7 +169,7 @@ export const getMemories = async (req, res) => {
 
     const memories = await Memory.find(query)
       .populate("author", "username avatarUrl")
-      .populate("taggedPersons", "name user") 
+      .populate("taggedPersons", "name user")
       .populate("sharedWith", "username") // Populate sharedWith for debugging/frontend
       .sort({ date: -1 });
 
@@ -165,9 +180,8 @@ export const getMemories = async (req, res) => {
   }
 };
 
-// ========================================================
-// 🟢 READ SINGLE MEMORY
-// ========================================================
+
+// READ SINGLE MEMORY
 export const getMemoryById = async (req, res) => {
   try {
     const memory = await Memory.findById(req.params.id)
@@ -181,9 +195,9 @@ export const getMemoryById = async (req, res) => {
     const isAuthor = memory.author._id.toString() === req.user._id.toString();
     const isPublic = memory.visibility === 'family';
     const isShared = memory.visibility === 'selected' && memory.sharedWith.some(u => u._id.toString() === req.user._id.toString());
-    
+
     if (!isAuthor && !isPublic && !isShared) {
-         return res.status(403).json({ message: "You do not have permission to view this memory." });
+      return res.status(403).json({ message: "You do not have permission to view this memory." });
     }
 
     res.json(memory);
@@ -192,12 +206,11 @@ export const getMemoryById = async (req, res) => {
   }
 };
 
-// ========================================================
-// 🟢 UPDATE MEMORY
-// ========================================================
+
+// UPDATE MEMORY
 export const updateMemory = async (req, res) => {
   try {
-    const oldMemory = req.memory; 
+    const oldMemory = req.memory;
 
     // History Snapshot
     await MemoryVersion.create({
@@ -216,17 +229,17 @@ export const updateMemory = async (req, res) => {
       if (!isOwner) {
         const userPerson = await Person.findOne({ user: req.user._id, family: oldMemory.family });
         if (userPerson) {
-            const oldTags = oldMemory.taggedPersons.map(id => id.toString());
-            const requestedTags = finalTaggedPersons;
-            const isRemovingSelf = !requestedTags.includes(userPerson._id.toString());
-            
-            if (isRemovingSelf) {
-                finalTaggedPersons = oldTags.filter(id => id !== userPerson._id.toString());
-            } else {
-                finalTaggedPersons = oldTags;
-            }
+          const oldTags = oldMemory.taggedPersons.map(id => id.toString());
+          const requestedTags = finalTaggedPersons;
+          const isRemovingSelf = !requestedTags.includes(userPerson._id.toString());
+
+          if (isRemovingSelf) {
+            finalTaggedPersons = oldTags.filter(id => id !== userPerson._id.toString());
+          } else {
+            finalTaggedPersons = oldTags;
+          }
         } else {
-             finalTaggedPersons = oldMemory.taggedPersons;
+          finalTaggedPersons = oldMemory.taggedPersons;
         }
       }
     }
@@ -234,19 +247,19 @@ export const updateMemory = async (req, res) => {
     // UPDATE
     const updatedMemory = await Memory.findByIdAndUpdate(
       oldMemory._id,
-      { 
+      {
         title: req.body.title,
         description: req.body.description,
         date: req.body.date,
         taggedPersons: finalTaggedPersons,
-        // ✅ Allow updating visibility & sharedWith
+        // Allow updating visibility & sharedWith
         visibility: req.body.visibility,
-        sharedWith: req.body.sharedWith 
+        sharedWith: req.body.sharedWith
       },
       { new: true }
     )
-    .populate("author", "username avatarUrl")
-    .populate("taggedPersons", "name user");
+      .populate("author", "username avatarUrl")
+      .populate("taggedPersons", "name user");
 
     res.json(updatedMemory);
   } catch (err) {
@@ -255,18 +268,17 @@ export const updateMemory = async (req, res) => {
   }
 };
 
-// ========================================================
-// 🟢 DELETE MEMORY
-// ========================================================
+
+// DELETE MEMORY
 export const deleteMemory = async (req, res) => {
   try {
-    const memory = req.memory; 
+    const memory = req.memory;
 
     if (memory.author.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Only the author can delete this memory." });
     }
 
-    await memory.deleteOne(); 
+    await memory.deleteOne();
     await MemoryVersion.deleteMany({ memory: memory._id });
 
     res.json({ message: "Memory deleted successfully" });
@@ -276,9 +288,7 @@ export const deleteMemory = async (req, res) => {
   }
 };
 
-// ... sendMemoryNotifications function remains the same ...
-// You can keep the notification logic as it was, 
-// just ensure you import Person and User correctly.
+
 const sendMemoryNotifications = async (req, memory, familyId) => {
   try {
     let taggedUserIds = [];
@@ -305,39 +315,39 @@ const sendMemoryNotifications = async (req, memory, familyId) => {
     // Notify Shared With (Selected Users)
     // 🟢 ADDED: Notify users in 'sharedWith' if visibility is 'selected'
     if (req.body.visibility === 'selected' && req.body.sharedWith?.length > 0) {
-        for (const userId of req.body.sharedWith) {
-            if (userId !== req.user._id.toString() && !taggedUserIds.includes(userId)) {
-                 await createNotification({
-                    recipient: userId,
-                    sender: req.user._id,
-                    type: 'memory_share', // You might need to handle this type in frontend
-                    payload: {
-                      memoryId: memory._id,
-                      message: `${req.user.username} shared a memory with you.`
-                    }
-                  });
+      for (const userId of req.body.sharedWith) {
+        if (userId !== req.user._id.toString() && !taggedUserIds.includes(userId)) {
+          await createNotification({
+            recipient: userId,
+            sender: req.user._id,
+            type: 'memory_share', // You might need to handle this type in frontend
+            payload: {
+              memoryId: memory._id,
+              message: `${req.user.username} shared a memory with you.`
             }
+          });
         }
-        return; // Stop here if selected, don't broadcast to whole family
+      }
+      return; // Stop here if selected, don't broadcast to whole family
     }
 
     // Notify Family (Broadcast - Only if visibility is FAMILY)
     if (req.body.visibility === 'family' || !req.body.visibility) {
-        const familyMembers = await User.find({ families: familyId });
-        for (const member of familyMembers) {
-          const memberId = member._id.toString();
-          if (memberId !== req.user._id.toString() && !taggedUserIds.includes(memberId)) {
-            await createNotification({
-              recipient: memberId,
-              sender: req.user._id,
-              type: 'memory_create',
-              payload: {
-                memoryId: memory._id,
-                message: `${req.user.username} added a new memory.`
-              }
-            });
-          }
+      const familyMembers = await User.find({ families: familyId });
+      for (const member of familyMembers) {
+        const memberId = member._id.toString();
+        if (memberId !== req.user._id.toString() && !taggedUserIds.includes(memberId)) {
+          await createNotification({
+            recipient: memberId,
+            sender: req.user._id,
+            type: 'memory_create',
+            payload: {
+              memoryId: memory._id,
+              message: `${req.user.username} added a new memory.`
+            }
+          });
         }
+      }
     }
   } catch (err) {
     console.error("Notification Error:", err);

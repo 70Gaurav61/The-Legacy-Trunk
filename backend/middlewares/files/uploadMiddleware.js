@@ -5,9 +5,7 @@ import "dotenv/config";
 import multer from "multer";
 import cloudinary from "../../config/cloudinary.js";
 
-// ==========================================
-// Custom Cloudinary Storage Engine for Multer
-// ==========================================
+
 class CloudinaryCustomStorage {
   constructor(opts) {
     this.getFolder = opts.getFolder;
@@ -15,18 +13,18 @@ class CloudinaryCustomStorage {
   }
 
   _handleFile(req, file, cb) {
-    console.log("===== CLOUDINARY UPLOAD START =====");
+    // console.log("===== CLOUDINARY UPLOAD START =====");
     console.log("Original name:", file.originalname);
     console.log("Mimetype:", file.mimetype);
 
     const isVideo = file.mimetype.startsWith("video");
     const folder = this.getFolder(req, file);
-    console.log("Upload folder:", folder);
-    // Auto detects image, video, raw (pdf)
+    // console.log("Upload folder:", folder);
+
     const resource_type = isVideo ? "video" : "auto";
 
-    console.log("Folder:", folder);
-    console.log("Resource type:", resource_type);
+    // console.log("Folder:", folder);
+    // console.log("Resource type:", resource_type);
 
     const stream = cloudinary.uploader.upload_stream(
       {
@@ -40,9 +38,9 @@ class CloudinaryCustomStorage {
           return cb(error);
         }
 
-        console.log("===== CLOUDINARY SUCCESS =====");
-        console.log("URL:", result.secure_url);
-        console.log("Public ID:", result.public_id);
+        // console.log("===== CLOUDINARY SUCCESS =====");
+        // console.log("URL:", result.secure_url);
+        // console.log("Public ID:", result.public_id);
         // Expose the uploaded URL to file.path so controllers don't need changes
         cb(null, {
           path: result.secure_url,
@@ -70,9 +68,7 @@ class CloudinaryCustomStorage {
   }
 }
 
-// ==========================================
-// File filter
-// ==========================================
+
 const fileFilter = (req, file, cb) => {
   const allowed = ["image/", "video/", "application/pdf"];
   if (!allowed.some(type => file.mimetype.startsWith(type))) {
@@ -81,10 +77,9 @@ const fileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-// ==========================================
-// 🟢 PUBLIC UPLOAD (Memories, Avatars, Storage)
+
+// PUBLIC UPLOAD (Memories, Avatars, Storage)
 // Folder: legacytrunk/imagefolder or legacytrunk/videofolder
-// ==========================================
 const publicStorage = new CloudinaryCustomStorage({
   getFolder: (req, file) => {
     return file.mimetype.startsWith("video") ? "legacytrunk/videofolder" : "legacytrunk/imagefolder";
