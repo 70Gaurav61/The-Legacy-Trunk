@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom"; // 🟢 Added Outlet
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./services/useAuth";
 
 import Header from "./components/Header";
@@ -19,7 +19,7 @@ import StoryView from "./pages/StoryView";
 import Profile from "./pages/Profile";
 import Vault from "./components/Vault";
 
-// 🟢 1. Create a Layout for standard pages (Restores the container look)
+//1. Create a Layout for standard pages (Restores the container look)
 const StandardLayout = () => (
   <div className="container mx-auto px-4 py-6">
     <Outlet />
@@ -34,7 +34,6 @@ export default function App() {
       <div className="min-h-screen flex flex-col">
         <Header />
 
-        {/* 🟢 2. REMOVED "container" from here. Now Main is full width. */}
         <main className="flex-1 w-full p-3 bg-gray-50">
           <Routes>
             {/* Redirect logic */}

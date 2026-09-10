@@ -15,7 +15,7 @@ export const uploadStorageItem = async (req, res) => {
       password,
       tags: tags?.split(",") || [],
       file: {
-        url: file.location,      // <-- S3 URL
+        url: file.path,      // <-- Cloudinary URL
         mimeType: file.mimetype,
         size: file.size,
       },

@@ -4,12 +4,15 @@ import User from "../../models/User.js";
 export const verifyAuth = async (req, res, next) => {
   try {
     const token = req.cookies?.token;
-      // || req.headers.authorization?.split(" ")[1];
+    // || req.headers.authorization?.split(" ")[1];
     if (!token)
       return res.status(401).json({ message: "Authentication token missing" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
+    // const user = await User.findById(decoded.id).select("-password");
+    const user = await User.findById(decoded.id)
+      .select("-password")
+      .populate("families", "name familyCode");
 
     if (!user) return res.status(404).json({ message: "User not found" });
 

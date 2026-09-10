@@ -5,15 +5,15 @@ import { api } from "../services/useAuth";
 import MemoriesFeed from "../components/MemoriesFeed";
 
 const useCurrentFamily = () => {
-    const [familyId, setFamilyId] = useState(null);
-    useEffect(() => {
-        api.get("/auth/me").then(res => {
-            if(res.data.user.families.length > 0) {
-                setFamilyId(res.data.user.families[0]);
-            }
-        });
-    }, []);
-    return familyId;
+  const [familyId, setFamilyId] = useState(null);
+  useEffect(() => {
+    api.get("/auth/me").then(res => {
+      if (res.data.user.families.length > 0) {
+        setFamilyId(res.data.user.families[0]._id);
+      }
+    });
+  }, []);
+  return familyId;
 };
 
 export default function PrivateGallery() {
@@ -64,9 +64,9 @@ export default function PrivateGallery() {
       <div className="max-w-5xl mx-auto -mt-8 relative z-10 px-4">
         <div className="bg-white rounded-3xl shadow-xl min-h-[500px] border border-gray-100">
           {loading ? (
-             <div className="p-20 text-center text-gray-400">Loading your vault...</div>
+            <div className="p-20 text-center text-gray-400">Loading your vault...</div>
           ) : (
-             <MemoriesFeed memories={memories} />
+            <MemoriesFeed memories={memories} />
           )}
         </div>
       </div>

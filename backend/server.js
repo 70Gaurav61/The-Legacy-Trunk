@@ -1,5 +1,7 @@
+import "dotenv/config";
+
 import express from "express";
-import dotenv from "dotenv";
+// import dotenv from "dotenv";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -10,7 +12,7 @@ import { errorHandler } from "./middlewares/error/errorHandler.js";
 import { startCronJobs } from "./utiles/cronService.js";
 
 // Load environment variables
-dotenv.config();
+// dotenv.config();
 
 // Initialize Express app
 const app = express();
@@ -68,5 +70,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`server running on http://localhost:${PORT}`);
-  
+
 });

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom"; // 🟢 useLocation is critical here
-import { FiX, FiSearch } from "react-icons/fi"; 
-import { api } from "../services/useAuth"; 
-import Sidebar from "../components/Sidebar"; 
-import StoriesRail from "../components/StoriesRail"; 
-import MemoriesFeed from "../components/MemoriesFeed"; 
+import { FiX, FiSearch } from "react-icons/fi";
+import { api } from "../services/useAuth";
+import Sidebar from "../components/Sidebar";
+import StoriesRail from "../components/StoriesRail";
+import MemoriesFeed from "../components/MemoriesFeed";
 
 export default function Home() {
   const location = useLocation(); // 🟢 Listens for URL changes
@@ -15,14 +15,14 @@ export default function Home() {
     const params = new URLSearchParams(location.search);
     return params.get("search");
   };
-  
+
   // This value will update every time the URL changes
-  const searchTerm = getSearchTerm(); 
+  const searchTerm = getSearchTerm();
 
   const [activeUserFilter, setActiveUserFilter] = useState(null);
-  const [familyMembers, setFamilyMembers] = useState([]); 
+  const [familyMembers, setFamilyMembers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
-  const [activeFamilyId, setActiveFamilyId] = useState(null); 
+  const [activeFamilyId, setActiveFamilyId] = useState(null);
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -35,7 +35,7 @@ export default function Home() {
         setCurrentUser(user);
 
         if (user.families && user.families.length > 0) {
-          const familyId = user.families[0]; 
+          const familyId = user.families[0]._id;
           setActiveFamilyId(familyId);
 
           const membersRes = await api.get(`/families/${familyId}/members`);
@@ -51,31 +51,31 @@ export default function Home() {
 
   // 2. Fetch Memories (Re-runs when location.search changes)
   useEffect(() => {
-    if (!activeFamilyId) return; 
+    if (!activeFamilyId) return;
 
     const fetchMemories = async () => {
       try {
         setLoading(true);
-        
+
         // 🟢 BUILD URL MANUALLY
         // This ensures the backend receives the query string correctly
         const params = new URLSearchParams();
-        
+
         if (activeUserFilter) {
-            params.append("userId", activeUserFilter);
+          params.append("userId", activeUserFilter);
         }
-        
+
         if (searchTerm) {
-            params.append("search", searchTerm);
+          params.append("search", searchTerm);
         }
 
         const queryString = params.toString();
-        const url = queryString 
-            ? `/memories/${activeFamilyId}?${queryString}` 
-            : `/memories/${activeFamilyId}`;
+        const url = queryString
+          ? `/memories/${activeFamilyId}?${queryString}`
+          : `/memories/${activeFamilyId}`;
 
 
-        const res = await api.get(url); 
+        const res = await api.get(url);
         setMemories(res.data);
 
       } catch (error) {
@@ -86,13 +86,13 @@ export default function Home() {
     };
 
     fetchMemories();
-    
+
     // 🟢 CRITICAL: 'location.search' ensures this runs when URL updates
-  }, [activeUserFilter, activeFamilyId, location.search]); 
+  }, [activeUserFilter, activeFamilyId, location.search]);
 
   // Helper: Clear Search
   const clearSearch = () => {
-    navigate('/'); 
+    navigate('/');
   };
 
   return (
@@ -104,11 +104,11 @@ export default function Home() {
       <div className="flex-1 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col min-h-[800px]">
         {/* Top Rail */}
         <div className="flex-shrink-0 z-10 bg-gray-50/95 backdrop-blur shadow-sm">
-          <StoriesRail 
-            users={familyMembers} 
+          <StoriesRail
+            users={familyMembers}
             currentUser={currentUser}
-            selectedUser={activeUserFilter} 
-            onSelectUser={setActiveUserFilter} 
+            selectedUser={activeUserFilter}
+            onSelectUser={setActiveUserFilter}
           />
         </div>
 
@@ -130,8 +130,8 @@ export default function Home() {
                       Found {memories.length} {memories.length === 1 ? 'memory' : 'memories'}
                     </p>
                   </div>
-                  
-                  <button 
+
+                  <button
                     onClick={clearSearch}
                     className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-red-600 bg-gray-100 hover:bg-red-50 px-4 py-2 rounded-full transition-all"
                   >
@@ -144,11 +144,11 @@ export default function Home() {
               {memories.length === 0 && searchTerm ? (
                 <div className="flex flex-col items-center justify-center h-96 text-gray-400">
                   <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400">
-                     <FiSearch size={32} />
+                    <FiSearch size={32} />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-700">No results found</h3>
                   <p>Try searching for a different name, date, or keyword.</p>
-                  <button 
+                  <button
                     onClick={clearSearch}
                     className="mt-4 text-indigo-600 font-semibold hover:underline"
                   >

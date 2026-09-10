@@ -66,7 +66,7 @@ export const uploadVaultFile = async (req, res) => {
     if (!vault) return res.status(404).json({ message: "Vault not found" });
 
     vault.files.push({
-      url: req.file.location,
+      url: req.file.path,
       mimeType: req.file.mimetype,
       size: req.file.size,
       originalName: req.file.originalname

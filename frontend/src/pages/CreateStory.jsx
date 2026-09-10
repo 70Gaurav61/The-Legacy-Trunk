@@ -4,35 +4,35 @@ import { FiUploadCloud, FiX, FiUsers, FiCalendar, FiLock, FiType, FiEye } from "
 import { api } from "../services/useAuth";
 
 const useCurrentFamily = () => {
-    const [familyId, setFamilyId] = useState(null);
-    useEffect(() => {
-        api.get("/auth/me").then(res => {
-            if(res.data.user.families.length > 0) {
-                setFamilyId(res.data.user.families[0]);
-            }
-        });
-    }, []);
-    return familyId;
+  const [familyId, setFamilyId] = useState(null);
+  useEffect(() => {
+    api.get("/auth/me").then(res => {
+      if (res.data.user.families.length > 0) {
+        setFamilyId(res.data.user.families[0]._id);
+      }
+    });
+  }, []);
+  return familyId;
 };
 
 export default function CreateStory() {
   const navigate = useNavigate();
   const familyId = useCurrentFamily();
-  
+
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  
+
   // Visibility State
   const [visibility, setVisibility] = useState("family");
   const [sharedWith, setSharedWith] = useState([]); // Array of User IDs (for permissions)
-  
+
   // Tagging State
   const [familyMembers, setFamilyMembers] = useState([]); // All Persons
   const [selectedTags, setSelectedTags] = useState([]); // Array of Person IDs (for display)
-  
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -86,23 +86,23 @@ export default function CreateStory() {
 
     // Validation: If 'selected' is chosen, user MUST pick at least one person
     if (visibility === 'selected' && sharedWith.length === 0) {
-        return alert("Please select at least one person to share with.");
+      return alert("Please select at least one person to share with.");
     }
 
     setLoading(true);
-    
+
     const formData = new FormData();
     formData.append("title", title);
     formData.append("description", description);
     formData.append("date", date);
     formData.append("visibility", visibility);
-    
+
     // Append Tags (Person IDs)
     selectedTags.forEach(id => formData.append("taggedPersons[]", id));
 
     // Append Shared With (User IDs) - Only if visibility is selected
     if (visibility === 'selected') {
-        sharedWith.forEach(id => formData.append("sharedWith[]", id));
+      sharedWith.forEach(id => formData.append("sharedWith[]", id));
     }
 
     if (file) {
@@ -142,11 +142,11 @@ export default function CreateStory() {
           <div className={`border-2 border-dashed rounded-3xl h-96 flex flex-col items-center justify-center transition-all ${preview ? 'border-gray-300 bg-black' : 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100'}`}>
             {preview ? (
               <div className="relative w-full h-full">
-                 {file?.type.startsWith("video") ? (
-                   <video src={preview} controls className="w-full h-full object-contain" />
-                 ) : (
-                   <img src={preview} alt="Preview" className="w-full h-full object-contain rounded-2xl" />
-                 )}
+                {file?.type.startsWith("video") ? (
+                  <video src={preview} controls className="w-full h-full object-contain" />
+                ) : (
+                  <img src={preview} alt="Preview" className="w-full h-full object-contain rounded-2xl" />
+                )}
                 <button onClick={removeFile} className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full backdrop-blur-sm transition-all"><FiX size={20} /></button>
               </div>
             ) : (
@@ -157,7 +157,7 @@ export default function CreateStory() {
               </label>
             )}
           </div>
-          
+
           <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500">
             <div className="flex items-start gap-3">
               <FiType className="text-gray-400 mt-1" size={20} />
@@ -190,13 +190,13 @@ export default function CreateStory() {
               <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><FiCalendar /> Date</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-gray-600 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
             </div>
-            
+
             {/* Visibility Settings */}
             <div>
               <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><FiLock /> Visibility</label>
-              <select 
-                value={visibility} 
-                onChange={(e) => setVisibility(e.target.value)} 
+              <select
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value)}
                 className="w-full border rounded-lg px-3 py-2 text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="family">Whole Family</option>
@@ -207,26 +207,26 @@ export default function CreateStory() {
 
             {/* CONDITIONAL: Share With Selector */}
             {visibility === 'selected' && (
-               <div className="pt-2 border-t border-gray-100 animate-fadeIn">
-                 <label className="flex items-center gap-2 text-xs font-bold text-indigo-600 mb-2"><FiEye /> Who can see this?</label>
-                 <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
-                   {availableForSharing.length === 0 ? (
-                       <p className="text-xs text-gray-400 italic">No other family members have joined yet.</p>
-                   ) : (
-                       availableForSharing.map(person => (
-                         <div key={person.user} onClick={() => toggleShare(person.user)} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors">
-                           <div className={`w-4 h-4 rounded border flex items-center justify-center ${sharedWith.includes(person.user) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'}`}>
-                             {sharedWith.includes(person.user) && <div className="w-2 h-2 bg-white rounded-sm" />}
-                           </div>
-                           <div className="flex items-center gap-2">
-                             <img src={person.avatarUrl || `https://ui-avatars.com/api/?name=${person.name}`} className="w-6 h-6 rounded-full" alt="" />
-                             <span className="text-sm text-gray-700">{person.name}</span>
-                           </div>
-                         </div>
-                       ))
-                   )}
-                 </div>
-               </div>
+              <div className="pt-2 border-t border-gray-100 animate-fadeIn">
+                <label className="flex items-center gap-2 text-xs font-bold text-indigo-600 mb-2"><FiEye /> Who can see this?</label>
+                <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
+                  {availableForSharing.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic">No other family members have joined yet.</p>
+                  ) : (
+                    availableForSharing.map(person => (
+                      <div key={person.user} onClick={() => toggleShare(person.user)} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors">
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${sharedWith.includes(person.user) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'}`}>
+                          {sharedWith.includes(person.user) && <div className="w-2 h-2 bg-white rounded-sm" />}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <img src={person.avatarUrl || `https://ui-avatars.com/api/?name=${person.name}`} className="w-6 h-6 rounded-full" alt="" />
+                          <span className="text-sm text-gray-700">{person.name}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             )}
           </div>
 

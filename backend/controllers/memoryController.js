@@ -20,7 +20,7 @@ export const createMemory = async (req, res) => {
 
     if (req.files?.length > 0) {
       memoryData.media = req.files.map(file => ({
-        url: file.location, 
+        url: file.path, 
         mimeType: file.mimetype,
         size: file.size,
       }));
