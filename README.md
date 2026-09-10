@@ -2,12 +2,6 @@
 
 > A digital family archive preserving stories, heirlooms, and memories across generations.
 
-![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
-![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
-![Express.js](https://img.shields.io/badge/express.js-%23404d59.svg?style=for-the-badge&logo=express&logoColor=%2361DAFB)
-![MongoDB](https://img.shields.io/badge/MongoDB-%234ea94b.svg?style=for-the-badge&logo=mongodb&logoColor=white)
-![AWS](https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)
-
 ---
 
 ## 📌 Overview
@@ -20,10 +14,9 @@ Whether you're mapping out your ancestry, sharing a memory from a recent holiday
 
 ## ✨ Features
 
-### Family Tree Management
-* **Generational Mapping**: Build a complete family tree by specifying relationships (parent, spouse, child, etc.).
-* **Smart Auto-generation**: The system automatically calculates generations based on the tree structure.
-* **Claim Codes**: Invite family members to claim their specific node in the family tree.
+### User Management & Authentication
+* **Role-Based Access**: Granular roles (Creator, Admin, Member) within family groups.
+* **Authentication**: Secure JWT-based authentication with bcrypt password hashing.
 
 ### Memories & Stories
 * **Rich Story Creation**: Record and share text stories, photos, and videos.
@@ -32,14 +25,12 @@ Whether you're mapping out your ancestry, sharing a memory from a recent holiday
 
 ### Secure Vault
 * **Secondary Protection**: A dedicated, password-protected vault separate from general memories.
-* **Cloud Storage**: Highly secure file and heirloom storage backed by AWS S3.
+* **Cloud Storage**: Highly secure file and heirloom storage backed by Cloudinary.
 
-### Time Capsules
-* **Scheduled Messages**: Schedule messages or memories to be delivered to family members at a future date using background cron jobs.
-
-### User Management & Authentication
-* **Role-Based Access**: Granular roles (Creator, Admin, Member) within family groups.
-* **Authentication**: Secure JWT-based authentication with bcrypt password hashing.
+### Family Tree Management
+* **Generational Mapping**: Build a complete family tree by specifying relationships (parent, spouse, child, etc.).
+* **Smart Auto-generation**: The system automatically calculates generations based on the tree structure.
+* **Claim Codes**: Invite family members to claim their specific node in the family tree.
 
 ---
 
@@ -96,30 +87,14 @@ The-Legacy-Trunk/
 | ---------- | ------- |
 | **React + Vite** | Fast, modern frontend framework |
 | **Tailwind CSS** | Utility-first styling and responsive UI |
-| **Framer Motion** | UI animations and transitions |
 | **Node.js** | Backend JavaScript runtime |
 | **Express.js** | Backend API framework |
 | **MongoDB (Mongoose)**| NoSQL Database for flexible schema design |
-| **AWS S3** | Cloud storage for media and Secure Vault files |
+| **Cloudinary** | Cloud storage for media and Secure Vault files |
 | **JWT & bcryptjs** | Authentication, authorization, and password hashing |
 | **Node-Cron** | Background task scheduling for Time Capsules |
 
 ---
-
-## 🗄️ Database Design
-
-The application uses MongoDB to handle complex relationships between users, families, and memories.
-
-```mermaid
-erDiagram
-    USER ||--o{ FAMILY : belongs_to
-    USER ||--|| SECURE_VAULT : owns
-    FAMILY ||--o{ PERSON : contains
-    FAMILY ||--o{ MEMORY : has
-    PERSON ||--o{ PERSON : related_to
-    USER ||--o{ MEMORY : authors
-    USER ||--o{ SCHEDULED_MESSAGE : authors
-```
 
 * **User**: Represents the physical account.
 * **Person**: Represents a node on the Family Tree. (A User can "claim" a Person).
@@ -153,65 +128,6 @@ Here are some of the core API endpoints that power the application:
 
 ---
 
-## ⚙️ Installation & Setup
-
-### Prerequisites
-* Node.js (v18+)
-* MongoDB Atlas connection string (or local MongoDB)
-* AWS Account (S3 bucket setup for media)
-
-### 1. Clone Repository
-```bash
-git clone <repository-url>
-cd The-Legacy-Trunk
-```
-
-### 2. Backend Setup
-```bash
-cd backend
-npm install
-```
-
-Create a `.env` file in the `backend/` directory:
-```env
-PORT=5000
-MONGO_URI=mongodb+srv://<USER>:<PASSWORD>@cluster...
-JWT_SECRET=your_jwt_secret_here
-JWT_EXPIRES_IN=7d
-AWS_ACCESS_KEY_ID=YOUR_AWS_KEY
-AWS_SECRET_ACCESS_KEY=YOUR_AWS_SECRET
-AWS_REGION=us-east-1
-S3_BUCKET_NAME=your-s3-bucket
-FRONTEND_URL=http://localhost:5173
-```
-
-Start the backend development server:
-```bash
-npm run dev
-```
-
-### 3. Frontend Setup
-Open a new terminal window:
-```bash
-cd frontend
-npm install
-```
-
-Create a `.env` file in the `frontend/` directory:
-```env
-VITE_API_URL=http://localhost:5000
-VITE_ALGOLIA_APP_ID=yourAlgoliaAppId
-VITE_ALGOLIA_SEARCH_KEY=publicSearchKey
-VITE_FEATURE_AI_SUGGESTIONS=true
-```
-
-Start the frontend development server:
-```bash
-npm run dev
-```
-
----
-
 ## 🖥️ Usage Flow
 
 1. **Register & Login**: Create a new account.
@@ -237,33 +153,10 @@ npm run dev
 
 ## 🧩 Challenges & Technical Decisions
 
+* **Rate Limiter**: Rate Limiter at the backend API endpoint.
 * **Tree Generation Logic**: Instead of manually setting hierarchies, the `Person` model dynamically calculates its `generation` level via a pre-save hook based on its relationship (father, mother, son, daughter) to existing nodes. This greatly simplifies frontend rendering.
 * **Secure Vault Isolation**: To ensure maximum privacy, the `SecureVault` model requires a *secondary* bcrypt-hashed password that is completely independent of the user's login password.
 * **Cron-based Time Capsules**: Implemented `node-cron` in the backend to routinely scan the `ScheduledMessage` collection and automatically unlock/deliver memories once their `deliverAt` timestamp has passed.
+* **AI API Integration**: Implement AI features (e.g., via Google/genai) to automatically generate tags for images uploaded as stories.
 
 ---
-
-## 📈 Future Improvements
-
-* 🚧 **PDF/Book Export**: Integrate `pdf-lib` to generate printable physical books of curated stories.
-* 🔮 **AI Integration**: Implement AI features (e.g., via OpenAI) to automatically tag people, generate memory prompts, and perform sentiment analysis on stories.
-* 🔮 **Automated Testing**: Introduce Jest and React Testing Library for robust automated testing coverage.
-
----
-
-## 📄 License
-
-No license has currently been specified.
-
----
-
-## 👨‍💻 Team Information
-
-**Team Name:** Team LegacyBuilder  
-**Event:** WEBSTER 2025 (Team ID: 941)
-
-| Member            | Role |
-| :---------------- | :--- |
-| **Gaurav Mahor**  | CSE  |
-| **Ashish Gautam** | CSE  |
-| **Devesh**        | CSE  |
