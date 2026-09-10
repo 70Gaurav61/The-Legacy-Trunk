@@ -38,8 +38,6 @@ export default function Header() {
       e.preventDefault();
 
       if (searchTerm.trim()) {
-        // 🟢 FIX: Navigate to '/home', not '/'
-        // Your App.jsx redirects '/' -> '/home', which was deleting the search param.
         navigate(`/home?search=${encodeURIComponent(searchTerm)}`);
       } else {
         navigate('/home'); // Clear search stays on /home
@@ -123,8 +121,15 @@ export default function Header() {
               to="/private"
               className="hidden md:flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-indigo-600 border-l pl-4 border-gray-200 transition-colors cursor-pointer group"
             >
-              <FiLock className="text-gray-400 group-hover:text-indigo-600" size={14} />
-              <span>My Private Story</span>
+              {/* <FiLock className="text-gray-400 group-hover:text-indigo-600" size={14} /> */}
+              <span>My Story</span>
+            </Link>
+            <Link
+              to="/vault"
+              className="hidden md:flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-indigo-600 border-l pl-4 border-gray-200 transition-colors cursor-pointer group"
+            >
+              <FiLock className="text-red-400 group-hover:text-indigo-600" size={14} />
+              <span>Private vault</span>
             </Link>
 
             <div className="w-10 h-10 cursor-pointer hover:opacity-80 transition-opacity">
