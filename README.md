@@ -20,6 +20,7 @@ Whether you're mapping out your ancestry, sharing a memory from a recent holiday
 
 ### Memories & Stories
 * **Rich Story Creation**: Record and share text stories, photos, and videos.
+* **AI-Powered Tagging & Search**: Automatically generates descriptive tags for uploaded photos using Google's Gemini AI, allowing users to effortlessly search their archives by context, objects, and activities.
 * **Tagging**: Tag specific family members in memories.
 * **Visibility Controls**: Keep memories private, share with selected members, or open them to the entire family circle.
 
@@ -41,7 +42,7 @@ flowchart TD
     User -->|React / Vite| Frontend
     Frontend -->|REST API / JWT| Backend
     Backend -->|Mongoose| MongoDB[(MongoDB)]
-    Backend -->|AWS SDK| S3[AWS S3 Storage]
+    Backend -->|Cloudinary API| Cloudinary[Cloudinary Storage]
     Backend -->|node-cron| Cron[Scheduled Tasks]
 ```
 
@@ -49,7 +50,7 @@ flowchart TD
 1. **User Authentication**: User logs in and receives an HTTP-only/secure JWT.
 2. **Family Selection**: User selects or joins a family group (via Family Code).
 3. **Data Retrieval**: Frontend fetches the family tree and memory feeds from the Express API.
-4. **Media Upload**: Media is sent to the backend, which securely pipes it to AWS S3 and returns the URL.
+4. **Media Upload**: Media is sent to the backend, which securely uploads it to Cloudinary and returns the URL.
 5. **Scheduled Tasks**: A Node.js cron job runs in the background to check and deliver Time Capsules.
 
 ---
@@ -93,6 +94,7 @@ The-Legacy-Trunk/
 | **Cloudinary** | Cloud storage for media and Secure Vault files |
 | **JWT & bcryptjs** | Authentication, authorization, and password hashing |
 | **Node-Cron** | Background task scheduling for Time Capsules |
+| **Google Gemini AI**| Multimodal AI for automated image analysis and smart tagging |
 
 ---
 
@@ -133,7 +135,7 @@ Here are some of the core API endpoints that power the application:
 1. **Register & Login**: Create a new account.
 2. **Create or Join**: Start a new family (generates a unique Family Code) or join an existing one using a code.
 3. **Build the Tree**: Navigate to the Family Tree and start adding members. Define their relationships, and the system auto-calculates generations.
-4. **Share a Memory**: Go to the feed, click "Create Story", upload a photo to S3, tag family members, and publish.
+4. **Share a Memory**: Go to the feed, click "Create Story", upload a photo to Cloudinary, tag family members, and publish.
 5. **Set a Time Capsule**: Use the Time Capsule feature to schedule a message for someone's future birthday.
 6. **Lock Documents**: Navigate to the Secure Vault, set a secondary password, and upload sensitive family documents.
 
@@ -145,6 +147,6 @@ Here are some of the core API endpoints that power the application:
 * **Tree Generation Logic**: Instead of manually setting hierarchies, the `Person` model dynamically calculates its `generation` level via a pre-save hook based on its relationship (father, mother, son, daughter) to existing nodes. This greatly simplifies frontend rendering.
 * **Secure Vault Isolation**: To ensure maximum privacy, the `SecureVault` model requires a *secondary* bcrypt-hashed password that is completely independent of the user's login password.
 * **Cron-based Time Capsules**: Implemented `node-cron` in the backend to routinely scan the `ScheduledMessage` collection and automatically unlock/deliver memories once their `deliverAt` timestamp has passed.
-* **AI API Integration**: Implement AI features (e.g., via Google/genai) to automatically generate tags for images uploaded as stories.
+* **AI API Integration**: Integrated Google's Gemini API (`@google/genai`) to automatically analyze multi-image memory uploads. The AI surveys the visual context across all photos and generates a consolidated list of 5-10 descriptive tags, powering a robust natural language search experience without requiring manual data entry.
 
 ---
