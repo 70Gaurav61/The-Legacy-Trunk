@@ -14,8 +14,8 @@ class CloudinaryCustomStorage {
 
   _handleFile(req, file, cb) {
     // console.log("===== CLOUDINARY UPLOAD START =====");
-    console.log("Original name:", file.originalname);
-    console.log("Mimetype:", file.mimetype);
+    // console.log("Original name:", file.originalname);
+    // console.log("Mimetype:", file.mimetype);
 
     const isVideo = file.mimetype.startsWith("video");
     const folder = this.getFolder(req, file);
@@ -52,8 +52,8 @@ class CloudinaryCustomStorage {
     );
 
     stream.on("error", (err) => {
-      console.error("===== CLOUDINARY STREAM ERROR =====");
-      console.error(err);
+      // console.error("===== CLOUDINARY STREAM ERROR =====");
+      // console.error(err);
       cb(err);
     });
     file.stream.pipe(stream);

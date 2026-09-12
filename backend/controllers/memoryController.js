@@ -13,10 +13,10 @@ export const createMemory = async (req, res) => {
       author: req.user._id,
       family: req.family._id,
       date: req.body.date || new Date(),
-      // Ensure sharedWith is handled if sent
       sharedWith: req.body.sharedWith || []
     };
 
+    let allTags = [];
     if (req.files?.length > 0) {
       // memoryData.media = req.files.map(file => ({
       //   url: file.path,
@@ -32,6 +32,8 @@ export const createMemory = async (req, res) => {
           if (file.mimetype.startsWith("image/")) {
             try {
               tags = await generateImageTags(file.path);
+              allTags.push(...tags);
+
             } catch (error) {
               console.error(
                 `AI tagging failed for ${file.path}:`,
@@ -44,11 +46,12 @@ export const createMemory = async (req, res) => {
             url: file.path,
             mimeType: file.mimetype,
             size: file.size,
-            tags
           };
         })
       );
     }
+
+    memoryData.tags = [...new Set(allTags)];
 
     const memory = await Memory.create(memoryData);
     sendMemoryNotifications(req, memory, req.family._id);

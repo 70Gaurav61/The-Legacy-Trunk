@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
 const FileSchema = new mongoose.Schema({
-  url: { type: String, required: true }, // S3 URL
+  url: { type: String, required: true },
   mimeType: String,
   size: Number,
   originalName: String,
@@ -15,7 +15,7 @@ const SecureVaultSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true // one vault per user
+      unique: true
     },
 
     vaultName: {
@@ -35,7 +35,6 @@ const SecureVaultSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-/* Hash vault password */
 SecureVaultSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   const salt = await bcrypt.genSalt(10);
@@ -43,7 +42,6 @@ SecureVaultSchema.pre("save", async function (next) {
   next();
 });
 
-/* Verify vault password */
 SecureVaultSchema.methods.verifyPassword = function (inputPassword) {
   return bcrypt.compare(inputPassword, this.password);
 };

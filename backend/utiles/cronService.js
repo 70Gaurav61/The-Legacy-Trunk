@@ -5,7 +5,7 @@ import Person from "../models/Person.js";
 import User from "../models/User.js";
 import { createNotification } from "./notificationService.js";
 
-// Helper to check if Month & Day match (ignoring year)
+// Helper to check if Month & Day match
 const isSameDay = (date1, date2) => {
   if (!date1 || !date2) return false;
 
@@ -77,7 +77,7 @@ export const startCronJobs = () => {
       }
 
     } catch (err) {
-      console.error("❌ Daily Cron Failed:", err);
+      console.error("Daily Cron Failed:", err);
     }
   });
 };   

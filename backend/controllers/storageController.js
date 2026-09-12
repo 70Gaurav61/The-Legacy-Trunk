@@ -1,6 +1,6 @@
 import StorageItem from "../models/StorageItem.js";
 
-// Upload File to S3
+// Upload File
 export const uploadStorageItem = async (req, res) => {
   try {
     const { title, description, password, tags } = req.body;
@@ -28,7 +28,7 @@ export const uploadStorageItem = async (req, res) => {
   }
 };
 
-// Get all storage items for the user
+
 export const getStorageItems = async (req, res) => {
   try {
     const items = await StorageItem.find({ owner: req.user._id });

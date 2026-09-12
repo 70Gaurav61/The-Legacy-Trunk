@@ -43,12 +43,12 @@ export default function App() {
             />
 
             {/* Public Routes (Wrapped in StandardLayout to keep them centered) */}
-            {!user && (
-              <Route element={<StandardLayout />}>
-                <Route path="/auth/login" element={<Login />} />
-                <Route path="/auth/signup" element={<Signup />} />
-              </Route>
-            )}
+            {/* {!user && ( */}
+            <Route element={<StandardLayout />}>
+              <Route path="/auth/login" element={<Login />} />
+              <Route path="/auth/signup" element={<Signup />} />
+            </Route>
+            {/* )} */}
 
             {/* Private Routes */}
             {user && (

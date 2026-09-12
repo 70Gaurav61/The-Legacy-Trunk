@@ -5,32 +5,25 @@ const PersonSchema = new mongoose.Schema({
   name: { type: String, required: true },
   dob: Date,
   gender: { type: String, enum: ["male", "female", "other"] },
-  
-  // Link to the User Account (if they have signed up)
+
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
 
-  // Tree Structure (Child points to Parent)
-  relationTo: { type: mongoose.Schema.Types.ObjectId, ref: "Person" }, 
-  relationType: { 
-    type: String, 
-    // ✅ FIXED: "Admin" removed. "Spouse" split into specific roles for clearer logic.
-    enum: ["father", "mother", "son", "daughter","spouse", "wife", "husband", "brother", "sister", "other"], 
-    default: "other" 
+  relationTo: { type: mongoose.Schema.Types.ObjectId, ref: "Person" },
+  relationType: {
+    type: String,
+    enum: ["father", "mother", "son", "daughter", "spouse", "wife", "husband", "brother", "sister", "other"],
+    default: "other"
   },
-  
+
   generation: { type: Number, index: true },
   avatarUrl: String,
   bio: String,
 
-  // ✅ ADDED: Essential for the 'Invite/Claim' feature
-  claimCode: { type: String, select: false }, // Hidden by default for security
+  claimCode: { type: String, select: false },
   isClaimed: { type: Boolean, default: false }
-
-  // ❌ REMOVED: children: [] (Calculated dynamically via aggregation in controller)
 }, { timestamps: true });
 
 
-// 🧠 Auto-calculate generation
 PersonSchema.pre("save", async function (next) {
   if (!this.isModified("relationTo")) return next();
   if (!this.relationTo) {

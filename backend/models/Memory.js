@@ -6,14 +6,14 @@ const MemorySchema = new mongoose.Schema({
   title: String,
   description: String,
   media: [{ url: String, mimeType: String, size: Number }],
-  mediaType: { type: String, enum: ["photo","video","story"], default: "story" },
+  mediaType: { type: String, enum: ["photo", "video", "story"], default: "story" },
   date: Date,
-  
-  // ✅ ADDED: Tag specific family members (by ID) in this memory
-  taggedPersons: [{ type: mongoose.Schema.Types.ObjectId, ref: "Person" }], 
-  
+
+  // Tag specific family members (by ID) in this memory
+  taggedPersons: [{ type: mongoose.Schema.Types.ObjectId, ref: "Person" }],
+
   tags: [String], // Keep this for general tags like "Summer", "Birthday"
-  visibility: { type: String, enum: ["family","selected","private"], default: "family" },
+  visibility: { type: String, enum: ["family", "selected", "private"], default: "family" },
   sharedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // used when visibility === selected
   collaborators: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // users allowed to propose edits
   versions: [{ type: mongoose.Schema.Types.ObjectId, ref: "MemoryVersion" }],
