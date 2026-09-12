@@ -15,40 +15,38 @@ export const createMemory = async (req, res) => {
       family: req.family._id,
       date: req.body.date || new Date(),
       // Ensure sharedWith is handled if sent
-      sharedWith: req.body.sharedWith || []
+      sharedWith: req.body.sharedWith || [],
+      // Ensure tags is handled if sent from frontend
+      tags: req.body.tags || []
     };
 
     if (req.files?.length > 0) {
-      // memoryData.media = req.files.map(file => ({
-      //   url: file.path,
-      //   mimeType: file.mimetype,
-      //   size: file.size,
-      // }));
-      memoryData.media = await Promise.all(
-        req.files.map(async (file) => {
+      // 1. First, map the media items
+      memoryData.media = req.files.map((file) => ({
+        url: file.path,
+        mimeType: file.mimetype,
+        size: file.size,
+      }));
 
-          let tags = [];
+      // 2. Extract image URLs for AI Tagging
+      const imageUrls = memoryData.media
+        .filter(m => m.mimeType.startsWith("image/"))
+        .map(m => m.url);
 
-          // Only send images to Gemini
-          if (file.mimetype.startsWith("image/")) {
-            try {
-              tags = await generateImageTags(file.path);
-            } catch (error) {
-              console.error(
-                `AI tagging failed for ${file.path}:`,
-                error.message
-              );
-            }
+      // 3. Generate tags for all images at once
+      if (imageUrls.length > 0) {
+        try {
+          const aiTags = await generateImageTags(imageUrls);
+          if (aiTags && aiTags.length > 0) {
+             // Combine with any existing tags, removing duplicates
+             const existingTags = Array.isArray(memoryData.tags) ? memoryData.tags : [memoryData.tags].filter(Boolean);
+             const combinedTags = [...new Set([...existingTags, ...aiTags])];
+             memoryData.tags = combinedTags;
           }
-
-          return {
-            url: file.path,
-            mimeType: file.mimetype,
-            size: file.size,
-            tags
-          };
-        })
-      );
+        } catch (error) {
+          console.error("AI tagging failed for memory collection:", error.message);
+        }
+      }
     }
 
     const memory = await Memory.create(memoryData);
