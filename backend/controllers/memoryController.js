@@ -67,6 +67,81 @@ export const getMemories = async (req, res) => {
     const familyId = req.params.familyId;
     const currentUserId = req.user._id;
 
+    // ---------------------------------------------------------
+    // ⚡ AUTO-PUBLISH DUE CAPSULES & NOTIFY
+    // ---------------------------------------------------------
+    // 1. Find capsules that are due (past deliverAt) AND not delivered yet
+    const dueCapsules = await ScheduledMessage.find({
+       family: familyId,
+       delivered: false,
+       deliverAt: { $lte: new Date() } 
+    }).populate("author", "username"); 
+
+    if (dueCapsules.length > 0) {
+       console.log(`🚀 Unearthing ${dueCapsules.length} time capsules...`);
+       
+       // 2. Prepare Memory Objects
+       const newMemories = dueCapsules.map(cap => ({
+          family: cap.family,
+          author: cap.author._id, 
+          title: "⏳ Time Capsule Unlocked", 
+          description: cap.content || "A memory from the past...", 
+          media: cap.attachments.map(a => ({ 
+              url: a.url, 
+              mimeType: a.mimeType,
+              size: 0 
+          })),
+          date: new Date(),     
+          visibility: 'family', 
+          tags: ['Time Capsule']
+       }));
+
+       // 3. Insert into DB and Capture the created docs
+       const createdMemories = await Memory.insertMany(newMemories);
+
+       // 4. 🟢 UPDATE CAPSULES: Mark Delivered AND Link Memory ID
+       // We map 1:1 because createdMemories array order matches dueCapsules array order
+       const updates = dueCapsules.map((capsule, index) => {
+           return ScheduledMessage.findByIdAndUpdate(capsule._id, {
+               $set: { 
+                   delivered: true,
+                   memoryId: createdMemories[index]._id // 🟢 Critical: Link the memory!
+               }
+           });
+       });
+       
+       // Execute all updates in parallel
+       await Promise.all(updates);
+
+       // 5. 🔔 SEND NOTIFICATIONS
+       const familyMembers = await User.find({ families: familyId });
+
+       for (let i = 0; i < createdMemories.length; i++) {
+          const memory = createdMemories[i];
+          const capsule = dueCapsules[i]; 
+          const authorName = capsule.author.username;
+
+          for (const member of familyMembers) {
+             const isAuthor = member._id.toString() === capsule.author._id.toString();
+
+             await createNotification({
+                recipient: member._id,
+                sender: capsule.author._id,
+                type: 'memory_create', 
+                payload: {
+                   memoryId: memory._id,
+                   message: isAuthor 
+                     ? "Your time capsule has finally opened!" 
+                     : `A time capsule from ${authorName} has opened!`
+                }
+             });
+          }
+       }
+    }
+    // ---------------------------------------------------------
+    // END OF AUTO-PUBLISH
+    // ---------------------------------------------------------
+
     // Base Query
     let query = { family: familyId };
 

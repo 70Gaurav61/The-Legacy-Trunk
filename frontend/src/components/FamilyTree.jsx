@@ -1,14 +1,17 @@
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { api, useAuth } from "../services/useAuth.jsx"; 
 import AddMemberModal from "../components/AddMemberModal"; 
-import { FiLoader, FiZoomIn, FiZoomOut, FiRefreshCw, FiArrowUp, FiAlertCircle, FiPlus, FiChevronUp, FiChevronDown } from "react-icons/fi";
+import Toast from "../components/ui/Toast";
+import { FiLoader, FiAlertCircle } from "react-icons/fi";
+import TreeNode from "./TreeNode";
+import TreeControls from "./TreeControls";
 
 const transformToTree = (person) => {
   if (!person) return null;
   const isMale = person.gender === "male";
-  const mainNode = { name: person.name, avatarUrl: person.avatarUrl, _id: person._id };
-  const spouseNode = person.spouse ? { name: person.spouse.name, avatarUrl: person.spouse.avatarUrl, _id: person.spouse._id } : { name: null };
+  const mainNode = { name: person.name, avatarUrl: person.avatarUrl, _id: person._id, user: person.user || null, isClaimed: person.isClaimed || false };
+  const spouseNode = person.spouse ? { name: person.spouse.name, avatarUrl: person.spouse.avatarUrl, _id: person.spouse._id, user: person.spouse.user || null, isClaimed: person.spouse.isClaimed || false } : { name: null };
   return {
     id: person._id, 
     male: isMale ? mainNode : spouseNode,
@@ -42,7 +45,8 @@ export default function FamilyTree() {
 
   const containerRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [startPan, setStartPan] = useState({ x: 0, y: 0 });
+  const startPan = useRef({ x: 0, y: 0 });
+  const [toast, setToast] = useState(null);
 
   const [viewMode, setViewMode] = useState("current");
   const [focalId, setFocalId] = useState(null); 
@@ -51,55 +55,46 @@ export default function FamilyTree() {
   const [upLevels, setUpLevels] = useState(1); 
 
   // Handlers
-  const handleMouseDown = (e) => {
+  const handleMouseDown = useCallback((e) => {
     if (e.button !== 0) return;
     setIsDragging(true);
-    setStartPan({ x: e.clientX, y: e.clientY });
+    startPan.current = { x: e.clientX, y: e.clientY };
     if (containerRef.current) containerRef.current.style.cursor = "grabbing";
-  };
+  }, []);
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = useCallback((e) => {
     if (!isDragging || !containerRef.current) return;
     e.preventDefault();
-    const dx = e.clientX - startPan.x;
-    const dy = e.clientY - startPan.y;
+    const dx = e.clientX - startPan.current.x;
+    const dy = e.clientY - startPan.current.y;
     containerRef.current.scrollLeft -= dx;
     containerRef.current.scrollTop -= dy;
-    setStartPan({ x: e.clientX, y: e.clientY });
-  };
+    startPan.current = { x: e.clientX, y: e.clientY };
+  }, [isDragging]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
     if (containerRef.current) containerRef.current.style.cursor = "grab";
-  };
+  }, []);
 
   // 🟢 ACTION HANDLERS
-  const handleOpenAddChild = (personId, personName) => {
+  const handleOpenAddChild = useCallback((personId, personName) => {
     setModalConfig({ type: "child", personId, personName });
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleOpenAddParent = (personId, personName) => {
+  const handleOpenAddParent = useCallback((personId, personName) => {
     setModalConfig({ type: "parent", personId, personName });
     setIsModalOpen(true);
-  };
+  }, []);
 
   // 🟢 NEW: ADD SPOUSE HANDLER
-  const handleOpenAddSpouse = (personId, personName) => {
+  const handleOpenAddSpouse = useCallback((personId, personName) => {
     setModalConfig({ type: "spouse", personId, personName });
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleSavePerson = async (payload) => {
-    try {
-        await api.post("/persons", payload);
-        fetchData(); 
-    } catch (err) {
-        alert(err.response?.data?.message || "Failed to add person");
-    }
-  };
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) return; 
     setLoading(true); setError(null); 
     try {
@@ -143,11 +138,21 @@ export default function FamilyTree() {
     } finally {
       setLoading(false);
     }
+  }, [user, viewMode]);
+
+  const handleSavePerson = async (payload) => {
+    try {
+        await api.post("/persons", payload);
+        setToast({ message: "Successfully added person", type: "success" });
+        fetchData(); 
+    } catch (err) {
+        setToast({ message: err.response?.data?.message || "Failed to add person", type: "error" });
+    }
   };
 
   useEffect(() => {
     if (!authLoading && user) fetchData();
-  }, [viewMode, user, authLoading]);
+  }, [viewMode, user, authLoading, fetchData]);
 
   const { parentMap, nodesById } = useMemo(() => {
     if (!treeData) return { parentMap: new Map(), nodesById: new Map() };
@@ -202,186 +207,13 @@ export default function FamilyTree() {
     return clone(nodesById.get(visualRootId));
   }, [treeData, focalId, downLevels, upLevels, viewMode]);
 
-  // ==========================================
-  // 🎨 RENDERERS (With Add Buttons & Spouse Fix)
-  // ==========================================
-  
-  // 🟢 UPDATE 1: Accept partnerId and partnerName
-  const renderPersonCircle = (person, isMale, partnerId, partnerName) => {
-    const present = !!person?.name;
-    const isMe = user?.primaryPerson === person._id;
-    const isFocal = person._id === focalId; 
-
-    let borderColor = "";
-    let ringEffect = "";
-    let textColor = "";
-
-    if (isMe) {
-        borderColor = "border-yellow-400"; 
-        textColor = "text-yellow-700"; 
-        ringEffect = "ring-4 ring-yellow-400/30 scale-110 shadow-lg shadow-yellow-100 z-10";
-    } else {
-        if (isMale) {
-            borderColor = "border-blue-500";
-            textColor = "text-blue-700";
-        } else {
-            borderColor = "border-pink-500";
-            textColor = "text-pink-700";
-        }
-        if (isFocal) {
-            ringEffect = "ring-2 ring-indigo-200";
-        } else {
-            ringEffect = "hover:scale-105 hover:shadow-md";
-        }
-    }
-
-    return (
-      <div className="mt-10 flex flex-col items-center relative group">
-        
-        {present && (
-            <button 
-                // 🟢 FIX: Added onMouseDown stopPropagation to prevent drag start
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.stopPropagation(); handleOpenAddParent(person._id, person.name); }}
-                className="absolute -top-6 left-1/2 -translate-x-1/2 bg-gray-100 hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 p-1 rounded-full shadow-sm transition-all opacity-0 group-hover:opacity-100 z-30"
-                title="Add Parent"
-            >
-                <FiChevronUp size={14} />
-            </button>
-        )}
-
-        <div
-          className={`w-14 h-14 rounded-full border-[3px] flex items-center justify-center overflow-hidden bg-white shadow-sm transition-all duration-300 ease-in-out
-            ${borderColor}
-            ${ringEffect}
-            ${textColor}
-          `}
-        >
-          {person.avatarUrl ? (
-            <img src={person.avatarUrl} alt={person.name} className="w-full h-full object-cover" />
-          ) : (
-             present ? (
-               <span className="text-sm font-bold tracking-tighter">
-                  {person.name.charAt(0).toUpperCase()}
-               </span>
-             ) : (
-               // 🟢 UPDATE 2: THE PLUS BUTTON FOR EMPTY SPOUSE
-               <button 
-                 type="button"
-                 // 🟢 CRITICAL FIX: Stop drag from interfering with click
-                 onMouseDown={(e) => e.stopPropagation()}
-                 className="w-full h-full flex items-center justify-center hover:bg-gray-50 transition-colors cursor-pointer relative z-50"
-                 onClick={(e) => {
-                    if (partnerId) {
-                        e.stopPropagation();
-                        handleOpenAddSpouse(partnerId, partnerName);
-                    }
-                 }}
-               >
-                 <FiPlus className="text-gray-300 text-xl" />
-               </button>
-             )
-          )}
-        </div>
-        
-        {isMe && (
-            <span className="absolute -top-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-lg z-20 tracking-wide">
-                YOU
-            </span>
-        )}
-
-        <div className="mt-2 text-center">
-            {present ? (
-               <>
-                 <div className={`text-xs font-bold leading-tight ${isMe ? "text-yellow-700" : "text-gray-800"}`}>
-                    {person.name}
-                 </div>
-                 <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mt-0.5">
-                    {isMale ? "Male" : "Female"}
-                 </div>
-               </>
-            ) : (
-               <div className="text-[10px] text-gray-400 font-medium">Empty</div>
-            )}
-        </div>
-      </div>
-    );
-  };
-
-  const Node = ({ node }) => {
-    if (!node) return null;
-    
-    const attachChildId = node.male._id || node.female._id;
-    const attachChildName = node.male.name || node.female.name;
-
-    return (
-      <div className="flex flex-col items-center relative min-w-[200px] mx-6">
-        
-        <div className="relative group">
-            <div className="flex items-center space-x-6 px-6 py-4 bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300 z-10 relative">
-                
-                {/* 🟢 UPDATE 3: Pass Partner ID (If Male is empty, pass Female ID, and vice versa) */}
-                {renderPersonCircle(node.male, true, node.female?._id, node.female?.name)}
-                
-                <div className="h-10 w-px bg-gradient-to-b from-gray-100 via-gray-300 to-gray-100"></div>
-                
-                {renderPersonCircle(node.female, false, node.male?._id, node.male?.name)}
-            
-            </div>
-
-            {attachChildId && (
-                <button 
-                    // 🟢 FIX: Stop drag here too
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={() => handleOpenAddChild(attachChildId, attachChildName)}
-                    className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-gray-100 hover:bg-indigo-100 text-gray-400 hover:text-indigo-600 p-1 rounded-full shadow border border-gray-200 transition-all opacity-0 group-hover:opacity-100 z-40"
-                    title="Add Child"
-                >
-                    <FiChevronDown size={14} />
-                </button>
-            )}
-        </div>
-
-        {node.children && node.children.length > 0 && (
-          <div className="flex flex-col items-center">
-            <div className="w-px h-10 bg-gray-300"></div>
-            <div className="relative w-full flex justify-center">
-                {node.children.length > 1 && (
-                    <div className="absolute top-0 h-px bg-gray-300" 
-                         style={{ 
-                           left: `calc(100% / ${node.children.length * 2})`, 
-                           right: `calc(100% / ${node.children.length * 2})` 
-                         }}>
-                    </div>
-                )}
-            </div>
-            <div className="flex items-start pt-0 space-x-8">
-                  {node.children.map((child) => (
-                    <div key={child.id} className="flex flex-col items-center relative px-6"> 
-                        {node.children.length > 1 && (
-                            <>
-                                <div className={`absolute top-0 right-1/2 w-1/2 h-px bg-gray-300 ${child === node.children[0] ? "hidden" : "block"}`}></div>
-                                <div className={`absolute top-0 left-1/2 w-1/2 h-px bg-gray-300 ${child === node.children[node.children.length - 1] ? "hidden" : "block"}`}></div>
-                            </>
-                        )}
-                        <div className="w-full flex justify-center items-start">
-                             <div className="w-px h-10 bg-gray-300"></div>
-                        </div>
-                        <Node node={child} />
-                    </div>
-                  ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   if (authLoading) return <div className="h-screen flex items-center justify-center text-gray-400 font-medium"><FiLoader className="animate-spin text-2xl mr-3 text-indigo-500"/> Authenticating...</div>;
   if (loading && !treeData) return <div className="h-screen flex items-center justify-center text-gray-400 font-medium"><FiLoader className="animate-spin text-2xl mr-3 text-indigo-500"/> Building Tree...</div>;
 
   return (
     <div className="h-[calc(100vh-110px)] flex flex-col font-sans overflow-hidden bg-gray-50">
+      
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       
       <AddMemberModal 
         isOpen={isModalOpen} 
@@ -390,33 +222,13 @@ export default function FamilyTree() {
         onSave={handleSavePerson}
       />
 
-      <div className="bg-white z-40 px-6 py-4 border-b border-gray-200 flex flex-wrap gap-4 items-center justify-between shadow-sm">
-        <div className="flex items-center gap-4">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">View</span>
-            <div className="flex bg-gray-100/50 p-1 rounded-lg border border-gray-200">
-                <button onClick={() => setViewMode("current")} className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-all ${viewMode === "current" ? "bg-white shadow-sm text-indigo-600 border border-gray-100" : "text-gray-500 hover:text-gray-700"}`}>My Focus</button>
-                <button onClick={() => setViewMode("whole")} className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-all ${viewMode === "whole" ? "bg-white shadow-sm text-indigo-600 border border-gray-100" : "text-gray-500 hover:text-gray-700"}`}>Full Tree</button>
-            </div>
-        </div>
-
-        <div className="flex items-center gap-6 text-sm">
-             <div className={`flex items-center gap-2 ${viewMode === "whole" ? "opacity-30 pointer-events-none" : ""}`}>
-                <FiArrowUp className="text-gray-400"/> 
-                <span className="text-gray-500">Ancestors:</span>
-                <input type="number" min="0" max="5" value={upLevels} onChange={(e) => setUpLevels(Number(e.target.value))} className="w-12 bg-gray-50 border border-gray-200 rounded px-1 py-0.5 text-center focus:outline-none focus:border-indigo-400"/>
-             </div>
-             <div className="flex items-center gap-2">
-                <span className="text-gray-500">Descendants:</span>
-                <input type="number" min="1" max="5" value={downLevels} onChange={(e) => setDownLevels(Number(e.target.value))} className="w-12 bg-gray-50 border border-gray-200 rounded px-1 py-0.5 text-center focus:outline-none focus:border-indigo-400"/>
-             </div>
-             <div className="flex items-center bg-white border border-gray-200 rounded-lg shadow-sm">
-                <button onClick={() => setZoom(z => Math.max(0.4, z - 0.1))} className="p-2 hover:bg-gray-50 text-gray-500"><FiZoomOut /></button>
-                <span className="w-12 text-center text-xs font-mono text-gray-400 border-x border-gray-100 py-2">{Math.round(zoom * 100)}%</span>
-                <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="p-2 hover:bg-gray-50 text-gray-500"><FiZoomIn /></button>
-                <button onClick={() => {setZoom(1); fetchData();}} className="p-2 hover:bg-gray-50 text-indigo-500 border-l border-gray-100"><FiRefreshCw /></button>
-             </div>
-        </div>
-      </div>
+      <TreeControls 
+        viewMode={viewMode} setViewMode={setViewMode}
+        upLevels={upLevels} setUpLevels={setUpLevels}
+        downLevels={downLevels} setDownLevels={setDownLevels}
+        zoom={zoom} setZoom={setZoom}
+        fetchData={fetchData}
+      />
 
       <div className="flex-1 overflow-hidden relative bg-[#F8FAFC]">
         <div className="absolute inset-0 opacity-[0.4]" style={{ backgroundImage: 'radial-gradient(#CBD5E1 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
@@ -440,7 +252,7 @@ export default function FamilyTree() {
                         <button onClick={fetchData} className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors shadow-lg shadow-red-200">Try Again</button>
                     </div>
                 ) : visibleTree ? (
-                    <Node node={visibleTree} /> 
+                    <TreeNode node={visibleTree} user={user} focalId={focalId} onAddParent={handleOpenAddParent} onAddChild={handleOpenAddChild} onAddSpouse={handleOpenAddSpouse} /> 
                 ) : (
                     <div className="flex flex-col items-center justify-center mt-20 z-10 opacity-60">
                          <div className="text-6xl mb-4">🌳</div>

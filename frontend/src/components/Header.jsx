@@ -1,5 +1,3 @@
-// src/components/Header.jsx
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FiSearch, FiLock } from "react-icons/fi";
@@ -40,7 +38,7 @@ export default function Header() {
       if (searchTerm.trim()) {
         navigate(`/home?search=${encodeURIComponent(searchTerm)}`);
       } else {
-        navigate('/home'); // Clear search stays on /home
+        navigate('/home'); 
       }
     }
   };
@@ -50,7 +48,7 @@ export default function Header() {
 
       {/* 1. Logo */}
       <div className="flex items-center gap-2">
-        <Link to="/home" className="text-xl font-bold text-indigo-900 tracking-tight">
+        <Link to={user ? "/home" : "/"} className="text-xl font-bold text-indigo-900 tracking-tight">
           Legacy Trunk
         </Link>
       </div>
@@ -119,7 +117,7 @@ export default function Header() {
 
             <Link
               to="/private"
-              className="hidden md:flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-indigo-600 border-l pl-4 border-gray-200 transition-colors cursor-pointer group"
+              className="hidden md:flex items-center gap-1 text-gray-500 hover:text-indigo-600 transition-all cursor-pointer group ml-1"
             >
               {/* <FiLock className="text-gray-400 group-hover:text-indigo-600" size={14} /> */}
               <span>My Story</span>

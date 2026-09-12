@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiImage, FiMoreVertical, FiEdit2, FiTrash2 } from "react-icons/fi";
 
@@ -57,14 +57,17 @@ export default function MemoriesFeed({
   }
 
   // Feed Layout
-  const grouped = memories.reduce((acc, item) => {
-    const dateKey = formatDate(item.date || item.createdAt);
-    if (!acc[dateKey]) acc[dateKey] = [];
-    acc[dateKey].push(item);
-    return acc;
-  }, {});
-
-  const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+  const { grouped, sortedDates } = useMemo(() => {
+    const groups = memories.reduce((acc, item) => {
+      const dateKey = formatDate(item.date || item.createdAt);
+      if (!acc[dateKey]) acc[dateKey] = [];
+      acc[dateKey].push(item);
+      return acc;
+    }, {});
+    
+    const sorted = Object.keys(groups).sort((a, b) => new Date(b) - new Date(a));
+    return { grouped: groups, sortedDates: sorted };
+  }, [memories]);
 
   return (
     <div className="space-y-12 pb-20 p-5 animate-fadeIn">

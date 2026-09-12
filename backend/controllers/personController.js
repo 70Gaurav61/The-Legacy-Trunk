@@ -1,5 +1,6 @@
 import Person from "../models/Person.js";
 import User from "../models/User.js";
+import Memory from "../models/Memory.js";
 import crypto from "crypto";
 import mongoose from "mongoose";
 // 🟢 Import the Notification Service
@@ -421,6 +422,27 @@ export const getManagedPersons = async (req, res) => {
 
     res.json(sidebarList);
   } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ==========================================
+// 🟢 GET PERSON PROFILE (public view for person entries)
+// Returns person details and memories where they are tagged
+// ==========================================
+export const getPersonProfile = async (req, res) => {
+  try {
+    const personId = req.params.personId;
+    const person = await Person.findById(personId).lean();
+    if (!person) return res.status(404).json({ message: 'Person not found' });
+
+    const memories = await Memory.find({ taggedPersons: personId })
+      .sort({ date: -1 })
+      .populate('author', 'username avatarUrl');
+
+    res.json({ person, memories });
+  } catch (err) {
+    console.error('Get Person Profile Error:', err);
     res.status(500).json({ message: err.message });
   }
 };

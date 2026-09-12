@@ -4,120 +4,147 @@
 
 ---
 
-## Project Overview
+## 📌 Overview
 
-For the **Great Zanetti family**, the circus has always been more than an art — it’s a living heritage passed down through sawdust and starlight for over a century.  
-However, as the elder members take their final bow, their treasured stories and traditions risk fading into silence.
+**The Legacy Trunk** is a secure, private platform designed to help families build a digital archive. It solves the problem of fading family history by allowing members to record stories, build generational family trees, preserve media, and pass down digital heirlooms securely.
 
-**The Legacy Trunk** seeks to solve this challenge by building a **digital family archive** — a private and secure platform where stories, heirlooms, and memories can be recorded, preserved, and shared across generations.
-
-By leveraging modern web technologies, AI-driven tools, and collaborative features, families can ensure their shared soul and magic live on.
+Whether you're mapping out your ancestry, sharing a memory from a recent holiday, or scheduling a "Time Capsule" for a future milestone, The Legacy Trunk ensures that your family's shared soul and magic live on.
 
 ---
 
-## Team Information
+## ✨ Features
 
-**Event:** WEBSTER 2025  
-**Team Name:** Team LegacyBuilder  
-**Team ID:** 941
+### User Management & Authentication
+* **Role-Based Access**: Granular roles (Creator, Admin, Member) within family groups.
+* **Authentication**: Secure JWT-based authentication with bcrypt password hashing.
 
-| Member            | Roll No. | Department |
-| :---------------- | :------: | :--------- |
-| **Gaurav Mahor**  | 20233127 | CSE        |
-| **Ashish Gautam** | 20233086 | CSE        |
-| **Devesh**        | 20233115 | CSE        |
+### Memories & Stories
+* **Rich Story Creation**: Record and share text stories, photos, and videos.
+* **Tagging**: Tag specific family members in memories.
+* **Visibility Controls**: Keep memories private, share with selected members, or open them to the entire family circle.
 
----
+### Secure Vault
+* **Secondary Protection**: A dedicated, password-protected vault separate from general memories.
+* **Cloud Storage**: Highly secure file and heirloom storage backed by Cloudinary.
 
-## Process Flow
-
-1. **User Authentication** – Secure, role-based login (grandparents, parents, kids).
-2. **Dashboard/Homepage** – Access the family trunk with quick links (Stories, Timeline, Photos, Circles).
-3. **Story Creation** – Upload text, audio, video, or photos; respond to memory prompts.
-4. **Timeline Building** – Map key family or life events chronologically.
-5. **Story Sharing** – Share with private circles of selected family members.
-6. **Search & Tagging** – AI-driven auto-tagging or manual search tags.
-7. **Collaboration** – Multiple contributors can refine or edit stories.
-8. **Export/Print** – Convert curated stories into PDF or book format.
+### Family Tree Management
+* **Generational Mapping**: Build a complete family tree by specifying relationships (parent, spouse, child, etc.).
+* **Smart Auto-generation**: The system automatically calculates generations based on the tree structure.
+* **Claim Codes**: Invite family members to claim their specific node in the family tree.
 
 ---
 
-## Features
+## 🏗️ System Architecture
 
-### Basic Features
+```mermaid
+flowchart TD
+    User -->|React / Vite| Frontend
+    Frontend -->|REST API / JWT| Backend
+    Backend -->|Mongoose| MongoDB[(MongoDB)]
+    Backend -->|AWS SDK| S3[AWS S3 Storage]
+    Backend -->|node-cron| Cron[Scheduled Tasks]
+```
 
-- Family story recording (text/audio/video/photo).
-- Timeline creation (life/family events).
-- Photo uploads with descriptions, dates, and tags.
-- Private family circles (secure sharing).
-- Search functionality with filters.
-- Role-based authentication & member management.
-- Export stories to **PDF** or **book** format.
-
-### Advanced Features
-
-- **Memory Prompts:** Predefined emotional or reflective questions.
-- **AI Text Analysis:** Auto-tagging, categorization, and sentiment extraction.
-- **Cross-Generational Matching:** Suggest connections based on shared interests.
-- **Collaborative Story Editing:** Multiple users can contribute to a single story.
-
----
-
-## Tech Stack
-
-| Layer                | Technology                    |
-| :------------------- | :---------------------------- |
-| **Frontend**         | React                         |
-| **Backend**          | Node.js / Express             |
-| **Database**         | MongoDB                       |
-| **Authentication**   | JWT (with bcrypt hashing)     |
-| **Media Storage**    | AWS S3                        |
-| **AI Text Analysis** | OpenAI API / Google Cloud NLP |
-| **PDF Generation**   | pdf-lib / Puppeteer           |
-| **Search Engine**    | ElasticSearch / Algolia       |
+### Application Flow
+1. **User Authentication**: User logs in and receives an HTTP-only/secure JWT.
+2. **Family Selection**: User selects or joins a family group (via Family Code).
+3. **Data Retrieval**: Frontend fetches the family tree and memory feeds from the Express API.
+4. **Media Upload**: Media is sent to the backend, which securely pipes it to AWS S3 and returns the URL.
+5. **Scheduled Tasks**: A Node.js cron job runs in the background to check and deliver Time Capsules.
 
 ---
 
-## Library / API Evaluation Guide
+## 📂 Project Structure
 
-When selecting external libraries and APIs, we evaluate them based on:
-
-1. **Active Development** – Regular commits and updates.
-2. **Community Support** – GitHub issue response, active discussions.
-3. **Popularity Metrics** – Stars, forks, contributors, and downloads.
-4. **Adoption & Reliability** – Used in production by real users.
-5. **Documentation Quality** – Clear setup and usage guides.
-6. **Maintenance & Backing** – Individual vs. company-supported.
-7. **License & Cost** – Open-source, trial, or premium.
-
----
-
-## System Architecture (Conceptual)
-
-Frontend (React / Next.js)
-↓
-Backend (Node.js + Express)
-↓
-Database (MongoDB / PostgreSQL)
-↓
-Storage (AWS S3 / Firebase)
-↓
-AI & Utilities (OpenAI, PDF-lib, ElasticSearch)
-
----
-
-## Future Enhancements
-
-- 🗣️ Voice-based story creation using speech-to-text.
-- 📷 Automatic photo captioning via vision AI.
-- 🧓 Family “legacy tree” visualization.
-- 💬 Integrated chat or comment threads for memories.
-- 🧾 Physical book printing integration.
+```text
+The-Legacy-Trunk/
+├── frontend/             # React (Vite) application
+│   ├── src/
+│   │   ├── assets/       # Static files and images
+│   │   ├── components/   # Reusable UI components (Modals, Feed, Vault)
+│   │   ├── contexts/     # React state management
+│   │   ├── hooks/        # Custom React hooks
+│   │   ├── pages/        # Main application views (Home, Profile, Tree)
+│   │   └── services/     # API integration logic
+│   └── package.json
+├── backend/              # Node.js / Express server
+│   ├── config/           # Database config
+│   ├── controllers/      # Route business logic
+│   ├── middlewares/      # Error handling & auth middleware
+│   ├── models/           # Mongoose schemas (User, Family, Person, Memory)
+│   ├── routes/           # Express API endpoints
+│   ├── utiles/           # Helpers and Cron job definitions
+│   ├── server.js         # Entry point
+│   └── package.json
+└── README.md
+```
 
 ---
 
-## 💡 Project Vision
+## 🛠️ Tech Stack
 
-To create **a timeless, digital home for family memories** — combining technology and emotion to make heritage everlasting.
+| Technology | Purpose |
+| ---------- | ------- |
+| **React + Vite** | Fast, modern frontend framework |
+| **Tailwind CSS** | Utility-first styling and responsive UI |
+| **Node.js** | Backend JavaScript runtime |
+| **Express.js** | Backend API framework |
+| **MongoDB (Mongoose)**| NoSQL Database for flexible schema design |
+| **Cloudinary** | Cloud storage for media and Secure Vault files |
+| **JWT & bcryptjs** | Authentication, authorization, and password hashing |
+| **Node-Cron** | Background task scheduling for Time Capsules |
 
-> _“Stories live forever when they’re told with love — and saved with care.”_
+---
+
+* **User**: Represents the physical account.
+* **Person**: Represents a node on the Family Tree. (A User can "claim" a Person).
+* **Family**: Represents the isolated group containing Persons and Memories.
+
+---
+
+## 🔌 API Documentation
+
+Here are some of the core API endpoints that power the application:
+
+| Method | Endpoint | Description | Auth Required |
+| ------ | -------- | ----------- | ------------- |
+| POST | `/api/v1/auth/register` | Register a new user account | No |
+| POST | `/api/v1/auth/login` | Authenticate user and return JWT | No |
+| POST | `/api/v1/families/create`| Create a new family group | Yes |
+| GET | `/api/v1/persons/tree/:id`| Fetch the family tree hierarchy | Yes |
+| POST | `/api/v1/memories` | Publish a new memory/story | Yes |
+| POST | `/api/v1/vault/upload` | Upload a file to Secure Vault | Yes |
+| POST | `/api/v1/scheduled-messages`| Create a Time Capsule | Yes |
+
+---
+
+## 🔐 Authentication & Security
+
+* **Stateless Authentication**: Uses JWT (JSON Web Tokens) for authenticating API requests.
+* **Password Hashing**: User passwords and Secure Vault secondary passwords are salted and hashed using `bcryptjs`.
+* **Rate Limiting**: `express-rate-limit` prevents brute-force API attacks by limiting requests per IP window.
+* **Security Headers**: `helmet` is implemented on the backend to set various HTTP headers for security.
+* **CORS**: Configured to safely accept cross-origin requests from the frontend client.
+
+---
+
+## 🖥️ Usage Flow
+
+1. **Register & Login**: Create a new account.
+2. **Create or Join**: Start a new family (generates a unique Family Code) or join an existing one using a code.
+3. **Build the Tree**: Navigate to the Family Tree and start adding members. Define their relationships, and the system auto-calculates generations.
+4. **Share a Memory**: Go to the feed, click "Create Story", upload a photo to S3, tag family members, and publish.
+5. **Set a Time Capsule**: Use the Time Capsule feature to schedule a message for someone's future birthday.
+6. **Lock Documents**: Navigate to the Secure Vault, set a secondary password, and upload sensitive family documents.
+
+---
+
+## 🧩 Challenges & Technical Decisions
+
+* **Rate Limiter**: Rate Limiter at the backend API endpoint.
+* **Tree Generation Logic**: Instead of manually setting hierarchies, the `Person` model dynamically calculates its `generation` level via a pre-save hook based on its relationship (father, mother, son, daughter) to existing nodes. This greatly simplifies frontend rendering.
+* **Secure Vault Isolation**: To ensure maximum privacy, the `SecureVault` model requires a *secondary* bcrypt-hashed password that is completely independent of the user's login password.
+* **Cron-based Time Capsules**: Implemented `node-cron` in the backend to routinely scan the `ScheduledMessage` collection and automatically unlock/deliver memories once their `deliverAt` timestamp has passed.
+* **AI API Integration**: Implement AI features (e.g., via Google/genai) to automatically generate tags for images uploaded as stories.
+
+---

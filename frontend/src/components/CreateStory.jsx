@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiUploadCloud, FiX, FiUsers, FiCalendar, FiLock, FiType, FiEye } from "react-icons/fi";
+import { FiUsers, FiCalendar, FiLock, FiType, FiEye } from "react-icons/fi";
 import { api } from "../services/useAuth";
+import Toast from "../components/ui/Toast";
+import MediaUploader from "./MediaUploader";
 
 const useCurrentFamily = () => {
   const [familyId, setFamilyId] = useState(null);
@@ -18,28 +20,28 @@ const useCurrentFamily = () => {
 export default function CreateStory() {
   const navigate = useNavigate();
   const familyId = useCurrentFamily();
-
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
+  
+  // 🟢 Updated: Changed to arrays for multi-upload
+  const [files, setFiles] = useState([]); 
+  const [previews, setPreviews] = useState([]);
+  
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-
-  // Visibility State
+  
   const [visibility, setVisibility] = useState("family");
-  const [sharedWith, setSharedWith] = useState([]); // Array of User IDs (for permissions)
-
-  // Tagging State
-  const [familyMembers, setFamilyMembers] = useState([]); // All Persons
-  const [selectedTags, setSelectedTags] = useState([]); // Array of Person IDs (for display)
-
+  const [sharedWith, setSharedWith] = useState([]); 
+  
+  const [familyMembers, setFamilyMembers] = useState([]); 
+  const [selectedTags, setSelectedTags] = useState([]); 
+  
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     const fetchMembers = async () => {
       try {
         const res = await api.get("/persons");
-        // We get the full person list. Note: person.user contains the User ID if they have an account.
         setFamilyMembers(res.data);
       } catch (err) {
         console.error("Failed to load family members", err);
@@ -48,20 +50,6 @@ export default function CreateStory() {
     fetchMembers();
   }, []);
 
-  const handleFileChange = (e) => {
-    const selected = e.target.files[0];
-    if (selected) {
-      setFile(selected);
-      setPreview(URL.createObjectURL(selected));
-    }
-  };
-
-  const removeFile = () => {
-    setFile(null);
-    setPreview(null);
-  };
-
-  // Toggle for Tagging (Uses Person ID)
   const toggleTag = (personId) => {
     if (selectedTags.includes(personId)) {
       setSelectedTags(selectedTags.filter(id => id !== personId));
@@ -70,7 +58,6 @@ export default function CreateStory() {
     }
   };
 
-  // Toggle for Sharing (Uses User ID)
   const toggleShare = (userId) => {
     if (sharedWith.includes(userId)) {
       setSharedWith(sharedWith.filter(id => id !== userId));
@@ -81,12 +68,11 @@ export default function CreateStory() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!familyId) return alert("Family ID not found. Please refresh.");
-    if (!file && !description) return alert("Please add a photo or a story text.");
+    if (!familyId) return setToast({message: "Family ID not found. Please refresh.", type: "error"});
+    if (files.length === 0 && !description) return setToast({message: "Please add a photo or a story text.", type: "error"});
 
-    // Validation: If 'selected' is chosen, user MUST pick at least one person
     if (visibility === 'selected' && sharedWith.length === 0) {
-      return alert("Please select at least one person to share with.");
+        return setToast({message: "Please select at least one person to share with.", type: "error"});
     }
 
     setLoading(true);
@@ -96,18 +82,19 @@ export default function CreateStory() {
     formData.append("description", description);
     formData.append("date", date);
     formData.append("visibility", visibility);
-
-    // Append Tags (Person IDs)
+    
     selectedTags.forEach(id => formData.append("taggedPersons[]", id));
 
-    // Append Shared With (User IDs) - Only if visibility is selected
     if (visibility === 'selected') {
       sharedWith.forEach(id => formData.append("sharedWith[]", id));
     }
 
-    if (file) {
-      formData.append("media", file); // Must match backend 'upload.array("media")'
-      const type = file.type.startsWith("video") ? "video" : "photo";
+    // 🟢 Updated: Loop through files to append to 'media' field
+    if (files.length > 0) {
+      files.forEach(f => formData.append("media", f));
+      
+      // Use the first file to determine general mediaType
+      const type = files[0].type.startsWith("video") ? "video" : "photo";
       formData.append("mediaType", type);
     } else {
       formData.append("mediaType", "story");
@@ -120,44 +107,26 @@ export default function CreateStory() {
       navigate("/");
     } catch (err) {
       console.error("Upload failed", err);
-      alert("Failed to post story. Please try again.");
+      setToast({message: "Failed to post story. Please try again.", type: "error"});
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper: Filter members who actually have a User Account (for sharing)
   const availableForSharing = familyMembers.filter(p => p.user !== null);
 
   return (
     <div className="max-w-4xl mx-auto p-6">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Create a Story</h1>
-        <p className="text-gray-500">Share a memory, photo, or video with your family.</p>
+        <p className="text-gray-500">Share memories with your family. (Up to 5 files)</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* LEFT COLUMN: Media Upload */}
         <div className="lg:col-span-2 space-y-6">
-          <div className={`border-2 border-dashed rounded-3xl h-96 flex flex-col items-center justify-center transition-all ${preview ? 'border-gray-300 bg-black' : 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100'}`}>
-            {preview ? (
-              <div className="relative w-full h-full">
-                {file?.type.startsWith("video") ? (
-                  <video src={preview} controls className="w-full h-full object-contain" />
-                ) : (
-                  <img src={preview} alt="Preview" className="w-full h-full object-contain rounded-2xl" />
-                )}
-                <button onClick={removeFile} className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full backdrop-blur-sm transition-all"><FiX size={20} /></button>
-              </div>
-            ) : (
-              <label className="cursor-pointer flex flex-col items-center p-8 w-full h-full justify-center">
-                <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4"><FiUploadCloud size={32} /></div>
-                <span className="text-lg font-semibold text-indigo-900">Click to upload photo or video</span>
-                <input type="file" className="hidden" onChange={handleFileChange} accept="image/*,video/*" />
-              </label>
-            )}
-          </div>
-
+          <MediaUploader files={files} setFiles={setFiles} previews={previews} setPreviews={setPreviews} maxFiles={5} setToast={setToast} />
+          
           <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500">
             <div className="flex items-start gap-3">
               <FiType className="text-gray-400 mt-1" size={20} />
@@ -165,9 +134,8 @@ export default function CreateStory() {
             </div>
           </div>
 
-          {/* Tagging (Any Person in Tree) */}
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3"><FiUsers /> Tag People (Who is in this?)</label>
+            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-3"><FiUsers /> Tag People</label>
             <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto custom-scrollbar">
               {familyMembers.map(person => (
                 <button key={person._id} type="button" onClick={() => toggleTag(person._id)} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${selectedTags.includes(person._id) ? "bg-indigo-600 text-white shadow-md" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
@@ -178,7 +146,6 @@ export default function CreateStory() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Settings */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
             <label className="block text-sm font-bold text-gray-700 mb-2">Title</label>
@@ -190,43 +157,37 @@ export default function CreateStory() {
               <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><FiCalendar /> Date</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-gray-600 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
             </div>
-
-            {/* Visibility Settings */}
+            
             <div>
               <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2"><FiLock /> Visibility</label>
-              <select
-                value={visibility}
-                onChange={(e) => setVisibility(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              >
+              <select value={visibility} onChange={(e) => setVisibility(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
                 <option value="family">Whole Family</option>
                 <option value="selected">Specific People</option>
                 <option value="private">Private (Only Me)</option>
               </select>
             </div>
 
-            {/* CONDITIONAL: Share With Selector */}
             {visibility === 'selected' && (
-              <div className="pt-2 border-t border-gray-100 animate-fadeIn">
-                <label className="flex items-center gap-2 text-xs font-bold text-indigo-600 mb-2"><FiEye /> Who can see this?</label>
-                <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
-                  {availableForSharing.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic">No other family members have joined yet.</p>
-                  ) : (
-                    availableForSharing.map(person => (
-                      <div key={person.user} onClick={() => toggleShare(person.user)} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors">
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${sharedWith.includes(person.user) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'}`}>
-                          {sharedWith.includes(person.user) && <div className="w-2 h-2 bg-white rounded-sm" />}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <img src={person.avatarUrl || `https://ui-avatars.com/api/?name=${person.name}`} className="w-6 h-6 rounded-full" alt="" />
-                          <span className="text-sm text-gray-700">{person.name}</span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+               <div className="pt-2 border-t border-gray-100 animate-fadeIn">
+                 <label className="flex items-center gap-2 text-xs font-bold text-indigo-600 mb-2"><FiEye /> Who can see this?</label>
+                 <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
+                   {availableForSharing.length === 0 ? (
+                       <p className="text-xs text-gray-400 italic">No other family members joined yet.</p>
+                   ) : (
+                       availableForSharing.map(person => (
+                         <div key={person.user} onClick={() => toggleShare(person.user)} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors">
+                           <div className={`w-4 h-4 rounded border flex items-center justify-center ${sharedWith.includes(person.user) ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'}`}>
+                             {sharedWith.includes(person.user) && <div className="w-2 h-2 bg-white rounded-sm" />}
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <img src={person.avatarUrl || `https://ui-avatars.com/api/?name=${person.name}`} className="w-6 h-6 rounded-full" alt="" />
+                             <span className="text-sm text-gray-700">{person.name}</span>
+                           </div>
+                         </div>
+                       ))
+                   )}
+                 </div>
+               </div>
             )}
           </div>
 
