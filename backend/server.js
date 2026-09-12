@@ -20,8 +20,6 @@ const app = express();
 // Connect to MongoDB
 connectDB();
 
-// -------------------- Global Middleware -------------------- //
-
 // Security headers
 app.use(helmet());
 
@@ -45,27 +43,27 @@ const apiLimiter = rateLimit({
 });
 app.use(apiLimiter);
 
-// -------------------- Health Check -------------------- //
+// Health Check
 app.get("/", (req, res) => {
   res.status(200).json({ message: "Legacy Trunk API is running 🚀" });
 });
 
-// -------------------- API Routes -------------------- //
-app.use("/api/v1", routes); // All routes are prefixed with /api/v1
+// API Routes
+app.use("/api/v1", routes);
 
-// -------------------- 404 Handler -------------------- //
+// 404 Handler
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
-// -------------------- Global Error Handler -------------------- //
-app.use(errorHandler); // catch all errors
+// Global Error Handler
+app.use(errorHandler);
 
 
-// 🟢 Start the Scheduler
+// Start the Scheduler
 startCronJobs();
 
-// -------------------- Start Server -------------------- //
+// Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

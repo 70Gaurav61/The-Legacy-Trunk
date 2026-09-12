@@ -19,7 +19,7 @@ export const createMemory = async (req, res) => {
       // Ensure tags is handled if sent from frontend
       tags: req.body.tags || []
     };
-
+    
     if (req.files?.length > 0) {
       // 1. First, map the media items
       memoryData.media = req.files.map((file) => ({

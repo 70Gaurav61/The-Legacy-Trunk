@@ -4,9 +4,9 @@ import {
   getPersons,
   updatePerson,
   deletePerson,
-  getDescendants, 
-  getAncestors,   
-  getFullTree,    
+  getDescendants,
+  getAncestors,
+  getFullTree,
   generateClaimCode,
   getManagedPersons, 
   getPersonProfile
@@ -16,29 +16,13 @@ import { isFamilyMember } from "../middlewares/access/isFamilyMember.js";
 
 const router = express.Router();
 
-// ==========================================
-// 🟢 1. GENERAL ROUTES (Use verifyAuth only)
-// ==========================================
-// These fetch data based on the LOGGED-IN USER, so they don't need an ID check.
-
 router.get("/managed", verifyAuth, getManagedPersons);
 router.get("/tree/descendants", verifyAuth, getDescendants);
-router.get("/tree/ancestors", verifyAuth, getAncestors); 
-router.get("/tree/whole", verifyAuth, getFullTree); 
+router.get("/tree/ancestors", verifyAuth, getAncestors);
+router.get("/tree/whole", verifyAuth, getFullTree);
 
-// Standard List (Fetches based on user's family)
 router.get("/", verifyAuth, getPersons);
 
-// 2. For Tagging/Join (ID provided) -> hits "/:familyId"
-
-
-
-// ==========================================
-// 🔒 2. SPECIFIC ID ROUTES (Use isFamilyMember)
-// ==========================================
-// These access a specific person/family, so we MUST check if the user is allowed.
-
-// Add Person (Checks if you are in the family you are adding to)
 router.post("/", verifyAuth, isFamilyMember, addPerson);
 router.get("/:familyId", verifyAuth, getPersons);
 

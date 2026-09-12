@@ -2,7 +2,6 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import Person from "../models/Person.js";
 import Family from "../models/Family.js";
-// 🟢 IMPORT NOTIFICATION SERVICE
 import { createNotification } from "../utiles/notificationService.js";
 
 const sanitizeUser = (user) => {
@@ -20,7 +19,7 @@ const cookieOptions = () => ({
   path: "/", // 🟢 Fix: Ensure cookie is available across all /api/v1 routes
 });
 
-// 1. Standard Register (No changes)
+// Standard Register 
 export const register = async (req, res) => {
   try {
     const { username, email, password, confirmPassword } = req.body;
@@ -47,7 +46,7 @@ export const register = async (req, res) => {
   }
 };
 
-// 2. Register via Claim Code (WITH NOTIFICATION)
+// Register via Claim Code
 export const registerAndClaim = async (req, res) => {
   const { username, email, password, claimCode } = req.body;
 
@@ -88,9 +87,6 @@ export const registerAndClaim = async (req, res) => {
     await user.save();
     await person.save();
 
-    // ========================================================
-    // NOTIFICATION LOGIC: NEW MEMBER JOINED
-    // ========================================================
     // Find all OTHER users in this family
     const familyMembers = await User.find({
       families: person.family,
@@ -121,7 +117,7 @@ export const registerAndClaim = async (req, res) => {
   }
 };
 
-// ... (Rest of your controller: login, logout, me, checkUsername) ...
+
 export const login = async (req, res) => {
   try {
     const { username, email, password } = req.body;

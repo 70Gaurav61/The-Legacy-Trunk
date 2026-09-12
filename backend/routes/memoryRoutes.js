@@ -17,8 +17,6 @@ router.get("/:familyId", verifyAuth, isFamilyMember, getMemories);
 router.put("/:memoryId", verifyAuth, isCollaborator, updateMemory);
 router.delete("/:memoryId", verifyAuth, isCollaborator, deleteMemory);
 
-// Memory Versions
-// router.post("/:memoryId/versions", verifyAuth, isCollaborator, addMemoryVersion);
 router.get("/:memoryId/versions", verifyAuth, isCollaborator, getMemoryVersions);
 
 

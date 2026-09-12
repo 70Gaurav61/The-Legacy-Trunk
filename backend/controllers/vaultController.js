@@ -21,7 +21,7 @@ export const createVault = async (req, res) => {
   }
 };
 
-/* Get vault metadata (NO file URLs) */
+/* Get vault metadata */
 export const getVault = async (req, res) => {
   try {
     const vault = await SecureVault.findOne({ owner: req.user._id })
