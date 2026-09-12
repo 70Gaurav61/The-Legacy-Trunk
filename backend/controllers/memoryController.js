@@ -4,6 +4,7 @@ import Person from "../models/Person.js";
 import MemoryVersion from "../models/MemoryVersion.js";
 import { createNotification } from "../utiles/notificationService.js";
 import { generateImageTags } from "../utiles/geminiService.js";
+import ScheduledMessage from "../models/ScheduledMessage.js";
 
 // CREATE MEMORY
 export const createMemory = async (req, res) => {
