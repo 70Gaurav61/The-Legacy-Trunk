@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FiLock, FiArrowLeft } from "react-icons/fi";
-import { api } from "../services/useAuth";
+import { api } from "../contexts/useAuth";
 import MemoriesFeed from "../components/MemoriesFeed";
 
 const useCurrentFamily = () => {

@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import { api } from "../services/useAuth.jsx";
+import { api, useAuth } from "../contexts/useAuth.jsx";
 import { useNavigate } from "react-router-dom";
 import {
   FiHome, FiLock, FiUser, FiCalendar, FiImage, FiType, FiCheck, FiArrowRight, FiLoader
 } from "react-icons/fi";
 
-export default function CreateFamily({ user }) {
+export default function CreateFamily() {
   const navigate = useNavigate();
+  const { user, refreshUser } = useAuth();
 
   // State
   const [step, setStep] = useState(1);
@@ -62,6 +63,10 @@ export default function CreateFamily({ user }) {
         family: familyId,
         isSelf: true // 👈 Critical Link
       });
+
+      // 🟢 Refresh user data via Context API function
+      await refreshUser();
+
       navigate("/home");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add person");
@@ -214,34 +219,6 @@ export default function CreateFamily({ user }) {
                     <option value="female">Female</option>
                     <option value="other">Other</option>
                   </select>
-                </div>
-              </div>
-
-              {/* Avatar URL + Preview */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Profile Picture URL</label>
-                <div className="flex gap-4 items-center">
-                  <div className="relative flex-1">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiImage className="text-gray-400" />
-                    </div>
-                    <input
-                      type="text"
-                      name="avatarUrl"
-                      value={personData.avatarUrl}
-                      onChange={handlePersonChange}
-                      placeholder="https://..."
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
-                  {/* Live Preview Avatar */}
-                  <div className="h-12 w-12 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex-shrink-0">
-                    {personData.avatarUrl ? (
-                      <img src={personData.avatarUrl} alt="Preview" className="h-full w-full object-cover" onError={(e) => e.target.style.display = 'none'} />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center text-gray-400"><FiUser /></div>
-                    )}
-                  </div>
                 </div>
               </div>
 

@@ -14,21 +14,26 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Helper to fetch/refresh the current logged-in user
+  const refreshUser = async () => {
+    try {
+      const res = await api.get("/auth/me");
+      setUser(res.data.user || null);
+      return res.data.user;
+    } catch (err) {
+      setUser(null);
+      return null;
+    }
+  };
+
   // Fetch user on app start (auto-login if cookie exists)
   useEffect(() => {
     let mounted = true;
-    const fetchUser = async () => {
-      try {
-        // 🟢 UPDATED: Added "/auth" prefix
-        const res = await api.get("/auth/me");
-        if (mounted) setUser(res.data.user || null);
-      } catch (err) {
-        if (mounted) setUser(null);
-      } finally {
-        if (mounted) setLoading(false);
-      }
+    const initAuth = async () => {
+      await refreshUser();
+      if (mounted) setLoading(false);
     };
-    fetchUser();
+    initAuth();
     return () => {
       mounted = false;
     };
@@ -110,6 +115,7 @@ export const AuthProvider = ({ children }) => {
         registerAndClaim,
         logout,
         setUser,
+        refreshUser,
         api // Exporting this allowing calls to api.get('/person/tree/...') to work correctly now
       }}
     >

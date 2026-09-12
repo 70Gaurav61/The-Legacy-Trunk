@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom"; // 🟢 useLocation is critical here
 import { FiX, FiSearch } from "react-icons/fi";
-import { api } from "../services/useAuth";
+import { api } from "../contexts/useAuth";
 import Sidebar from "../components/Sidebar";
 import StoriesRail from "../components/StoriesRail";
 import MemoriesFeed from "../components/MemoriesFeed";

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { api } from "../services/useAuth";
+import { api } from "../contexts/useAuth";
 
 export default function VaultUnlockModal({ onClose, onUnlocked }) {
   const [password, setPassword] = useState("");

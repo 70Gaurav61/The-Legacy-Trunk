@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../../services/useAuth.jsx";
+import { useAuth } from "../../contexts/useAuth.jsx";
 import { FiUser, FiLock, FiEye, FiEyeOff, FiLoader } from "react-icons/fi";
 
 export default function Login() {
@@ -9,7 +9,7 @@ export default function Login() {
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  
+
   // UI States
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");

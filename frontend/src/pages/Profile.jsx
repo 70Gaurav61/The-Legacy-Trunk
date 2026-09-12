@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { api, useAuth } from "../services/useAuth";
+import { api, useAuth } from "../contexts/useAuth";
 
 // Components
 import SettingsModal from "../components/SettingsModal";
@@ -14,19 +14,19 @@ export default function Profile() {
   const navigate = useNavigate();
   const { id: routeId } = useParams();
   const { user: currentUser } = useAuth();
-  
+
   // State
   const [user, setUser] = useState(null);
   const [memories, setMemories] = useState({ myUploads: [], taggedIn: [] });
   const [loading, setLoading] = useState(true);
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("uploads");
   const [showSettings, setShowSettings] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState(null); 
-  
-  const [toast, setToast] = useState(null); 
-  const [deleteTargetId, setDeleteTargetId] = useState(null); 
+  const [openMenuId, setOpenMenuId] = useState(null);
+
+  const [toast, setToast] = useState(null);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
 
   const [formData, setFormData] = useState({
     username: "", bio: "", gender: "", dob: "", avatar: null
@@ -78,7 +78,7 @@ export default function Profile() {
     const file = e.target.files[0];
     if (file) {
       setFormData({ ...formData, avatar: file });
-      setPreviewUrl(URL.createObjectURL(file)); 
+      setPreviewUrl(URL.createObjectURL(file));
     }
   };
 
@@ -122,12 +122,12 @@ export default function Profile() {
       const msg = err.response?.data?.message || "Failed to delete.";
       setToast({ message: msg, type: "error" });
     } finally {
-      setDeleteTargetId(null); 
+      setDeleteTargetId(null);
     }
   };
 
   // Navigate to edit page (make sure your Router handles /stories/:id/edit)
-  const handleEditMemory = (memoryId) => navigate(`/stories/${memoryId}`); 
+  const handleEditMemory = (memoryId) => navigate(`/stories/${memoryId}`);
 
   if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
 
@@ -135,10 +135,10 @@ export default function Profile() {
 
   return (
     <div className="max-w-4xl mx-auto pb-20 animate-fadeIn relative min-h-screen bg-gray-50/50">
-      
+
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-      
-      <ConfirmModal 
+
+      <ConfirmModal
         isOpen={!!deleteTargetId}
         onClose={() => setDeleteTargetId(null)}
         onConfirm={executeDelete}
@@ -146,9 +146,9 @@ export default function Profile() {
         message="Are you sure? This cannot be undone."
       />
 
-      {showSettings && isOwner && <SettingsModal user={user} onClose={() => setShowSettings(false)} onLogout={handleLogout}/>}
+      {showSettings && isOwner && <SettingsModal user={user} onClose={() => setShowSettings(false)} onLogout={handleLogout} />}
 
-      <ProfileHeader 
+      <ProfileHeader
         user={user}
         previewUrl={previewUrl}
         isEditing={isEditing}
@@ -161,34 +161,34 @@ export default function Profile() {
 
       <div className="px-6 mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-1 space-y-6">
-            <UserInfoCard user={user} isEditing={isEditing && isOwner} formData={formData} setFormData={setFormData} />
+          <UserInfoCard user={user} isEditing={isEditing && isOwner} formData={formData} setFormData={setFormData} />
         </div>
 
         <div className="md:col-span-2">
-           <div className="flex gap-8 border-b border-gray-200 mb-6">
-             <button onClick={() => setActiveTab("uploads")} className={`pb-3 text-sm font-bold transition-all relative ${activeTab === "uploads" ? "text-blue-600" : "text-gray-400"}`}>
-               My Stories
-               {activeTab === "uploads" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full"/>}
-             </button>
-             <button onClick={() => setActiveTab("tagged")} className={`pb-3 text-sm font-bold transition-all relative ${activeTab === "tagged" ? "text-blue-600" : "text-gray-400"}`}>
-               Tagged In
-               {activeTab === "tagged" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full"/>}
-             </button>
-           </div>
+          <div className="flex gap-8 border-b border-gray-200 mb-6">
+            <button onClick={() => setActiveTab("uploads")} className={`pb-3 text-sm font-bold transition-all relative ${activeTab === "uploads" ? "text-blue-600" : "text-gray-400"}`}>
+              My Stories
+              {activeTab === "uploads" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full" />}
+            </button>
+            <button onClick={() => setActiveTab("tagged")} className={`pb-3 text-sm font-bold transition-all relative ${activeTab === "tagged" ? "text-blue-600" : "text-gray-400"}`}>
+              Tagged In
+              {activeTab === "tagged" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full" />}
+            </button>
+          </div>
 
-           <MemoriesFeed 
-             layout="grid" 
-             memories={activeTab === "uploads" ? memories.myUploads : memories.taggedIn}
-             isOwner={isOwner && activeTab === "uploads"} 
-             openMenuId={openMenuId}
-             setOpenMenuId={setOpenMenuId}
-             
-             // 🟢 1. DELETE: Only if I am the owner (My Stories tab)
-             onDelete={isOwner && activeTab === "uploads" ? promptDelete : null}
-             
-             // 🟢 2. EDIT: ALWAYS allowed (My Stories OR Tagged In)
-             onEdit={isOwner ? handleEditMemory : null}
-           />
+          <MemoriesFeed
+            layout="grid"
+            memories={activeTab === "uploads" ? memories.myUploads : memories.taggedIn}
+            isOwner={isOwner && activeTab === "uploads"}
+            openMenuId={openMenuId}
+            setOpenMenuId={setOpenMenuId}
+
+            // 🟢 1. DELETE: Only if I am the owner (My Stories tab)
+            onDelete={isOwner && activeTab === "uploads" ? promptDelete : null}
+
+            // 🟢 2. EDIT: ALWAYS allowed (My Stories OR Tagged In)
+            onEdit={isOwner ? handleEditMemory : null}
+          />
         </div>
       </div>
     </div>

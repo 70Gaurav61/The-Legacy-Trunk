@@ -17,6 +17,7 @@ const cookieOptions = () => ({
   secure: process.env.NODE_ENV === "production",
   sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
   maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: "/", // 🟢 Fix: Ensure cookie is available across all /api/v1 routes
 });
 
 // 1. Standard Register (No changes)

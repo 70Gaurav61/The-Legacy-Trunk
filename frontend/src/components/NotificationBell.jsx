@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FiBell, FiCheck } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import { api } from "../services/useAuth";
+import { api } from "../contexts/useAuth";
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState([]);

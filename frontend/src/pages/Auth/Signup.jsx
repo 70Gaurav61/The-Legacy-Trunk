@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom"; // ✅ Added useSearchParams
-import { useAuth, api } from "../../services/useAuth.jsx"; // ✅ Import api for username check
+import { useAuth, api } from "../../contexts/useAuth.jsx"; // ✅ Import api for username check
 import { FiEye, FiEyeOff, FiUser, FiMail, FiLock, FiCheckCircle, FiXCircle, FiLoader, FiGift } from "react-icons/fi";
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
@@ -161,7 +161,7 @@ export default function Signup() {
 
         <form className="mt-8 space-y-6" onSubmit={onSubmit} noValidate>
           <div className="space-y-4">
-            
+
             {/* Username Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
@@ -174,9 +174,8 @@ export default function Signup() {
                   name="username"
                   value={form.username}
                   onChange={handleChange}
-                  className={`block w-full pl-10 pr-10 py-3 border ${
-                    usernameError ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50"
-                  } rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 transition-colors outline-none`}
+                  className={`block w-full pl-10 pr-10 py-3 border ${usernameError ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50"
+                    } rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 transition-colors outline-none`}
                   placeholder="Choose a username"
                   autoComplete="username"
                 />
@@ -191,9 +190,9 @@ export default function Signup() {
                 </div>
               </div>
               <div className="h-5 mt-1">
-                {usernameError ? <p className="text-xs text-red-500">{usernameError}</p> : 
-                 usernameAvailable === false ? <p className="text-xs text-red-500">Username taken</p> : 
-                 usernameAvailable === true ? <p className="text-xs text-green-600">Username available</p> : null}
+                {usernameError ? <p className="text-xs text-red-500">{usernameError}</p> :
+                  usernameAvailable === false ? <p className="text-xs text-red-500">Username taken</p> :
+                    usernameAvailable === true ? <p className="text-xs text-green-600">Username available</p> : null}
               </div>
             </div>
 
@@ -252,9 +251,8 @@ export default function Signup() {
                   name="confirmPassword"
                   value={form.confirmPassword}
                   onChange={handleChange}
-                  className={`block w-full pl-10 pr-10 py-3 border ${
-                    passwordMismatch ? "border-red-300" : "border-gray-200"
-                  } bg-gray-50 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 transition-colors outline-none`}
+                  className={`block w-full pl-10 pr-10 py-3 border ${passwordMismatch ? "border-red-300" : "border-gray-200"
+                    } bg-gray-50 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 transition-colors outline-none`}
                   placeholder="••••••••"
                 />
                 <button

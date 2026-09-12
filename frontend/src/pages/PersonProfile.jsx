@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api } from "../services/useAuth";
+import { api } from "../contexts/useAuth";
 import Toast from "../components/ui/Toast";
 import MemoriesFeed from "../components/MemoriesFeed";
 

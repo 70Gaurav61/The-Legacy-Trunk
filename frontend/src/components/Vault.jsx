@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FiLock, FiUnlock, FiFileText, FiImage, FiPlus } from "react-icons/fi";
-import { api } from "../services/useAuth";
+import { api } from "../contexts/useAuth";
 import VaultCreate from "./VaultCreate";
 import VaultUnlockModal from "./VaultUnlockModal";
 import VaultUploadModal from "./VaultUploadModal";
@@ -42,11 +42,11 @@ export default function Vault() {
   };
 
   const handleUploaded = () => {
-      setShowUpload(false);
-      setIsUnlocked(false);
-      setUnlockedFiles([]);
-      setLoading(true);
-      fetchVault();
+    setShowUpload(false);
+    setIsUnlocked(false);
+    setUnlockedFiles([]);
+    setLoading(true);
+    fetchVault();
   };
 
   if (loading) return <div className="p-8">Loading...</div>;
@@ -76,11 +76,10 @@ export default function Vault() {
           <button
             onClick={() => setShowUpload(true)}
             disabled={!isUnlocked}
-            className={`px-4 py-2 rounded-lg text-white ${
-              isUnlocked
+            className={`px-4 py-2 rounded-lg text-white ${isUnlocked
                 ? "bg-indigo-600"
                 : "bg-gray-400 cursor-not-allowed"
-            }`}
+              }`}
           >
             <FiPlus /> Upload
           </button>
@@ -138,16 +137,16 @@ export default function Vault() {
       {previewFile && <MediaPreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />}
 
       {showUnlock && (
-        <VaultUnlockModal 
-          onClose={() => setShowUnlock(false)} 
-          onUnlocked={handleUnlocked} 
+        <VaultUnlockModal
+          onClose={() => setShowUnlock(false)}
+          onUnlocked={handleUnlocked}
         />
       )}
 
       {showUpload && (
-        <VaultUploadModal 
-          onClose={() => setShowUpload(false)} 
-          onUploaded={handleUploaded} 
+        <VaultUploadModal
+          onClose={() => setShowUpload(false)}
+          onUploaded={handleUploaded}
         />
       )}
     </div>

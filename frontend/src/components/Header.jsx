@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { FiSearch, FiLock } from "react-icons/fi";
-import { useAuth } from "../services/useAuth";
+import { FiSearch, FiLock, FiCheck } from "react-icons/fi";
+import { useAuth } from "../contexts/useAuth";
 import NotificationBell from "./NotificationBell";
 import ProfileAvatar from "./ProfileAvatar";
 
@@ -9,6 +9,7 @@ export default function Header() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [searchParams] = useSearchParams();
+  const [isCopied, setIsCopied] = useState(false);
 
   const family = user?.families?.[0]; // for family-code in top-bar
   // if (!family) {
@@ -38,7 +39,7 @@ export default function Header() {
       if (searchTerm.trim()) {
         navigate(`/home?search=${encodeURIComponent(searchTerm)}`);
       } else {
-        navigate('/home'); 
+        navigate('/home');
       }
     }
   };
@@ -95,12 +96,21 @@ export default function Header() {
                 type="button"
                 onClick={() => {
                   navigator.clipboard.writeText(family.familyCode);
+                  setIsCopied(true);
+                  setTimeout(() => setIsCopied(false), 2000);
                 }}
-                className="px-2 py-1 text-xs font-medium text-indigo-600
-                          border border-indigo-200 rounded-md
-                          hover:bg-indigo-50 transition-colors"
+                className={`px-2 py-1 text-xs font-medium border rounded-md transition-all flex items-center gap-1 ${isCopied
+                    ? "text-green-600 border-green-300 bg-green-50"
+                    : "text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                  }`}
               >
-                Copy
+                {isCopied ? (
+                  <>
+                    <FiCheck size={12} /> Copied!
+                  </>
+                ) : (
+                  "Copy"
+                )}
               </button>
             </div>
 
