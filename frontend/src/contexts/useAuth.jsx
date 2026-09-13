@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const AuthContext = createContext();
 
@@ -13,6 +14,7 @@ export const api = axios.create({
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   // Helper to fetch/refresh the current logged-in user
   const refreshUser = async () => {
@@ -97,7 +99,7 @@ export const AuthProvider = ({ children }) => {
 
   // Logout
   const logout = async () => {
-    // navigate("/auth/login", { replace: true });
+    navigate("/auth/login", { replace: true });
     try {
       await api.post("/auth/logout");
     } finally {
