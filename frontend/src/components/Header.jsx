@@ -29,7 +29,7 @@ export default function Header() {
 
   const handleLogout = () => {
     logout();
-    navigate('/auth/login');
+    navigate('/');
   };
 
   const handleSearch = (e) => {
@@ -100,8 +100,8 @@ export default function Header() {
                   setTimeout(() => setIsCopied(false), 2000);
                 }}
                 className={`px-2 py-1 text-xs font-medium border rounded-md transition-all flex items-center gap-1 ${isCopied
-                    ? "text-green-600 border-green-300 bg-green-50"
-                    : "text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                  ? "text-green-600 border-green-300 bg-green-50"
+                  : "text-indigo-600 border-indigo-200 hover:bg-indigo-50"
                   }`}
               >
                 {isCopied ? (
