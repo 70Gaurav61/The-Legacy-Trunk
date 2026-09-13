@@ -27,8 +27,8 @@ export default function Header() {
     setSearchTerm(searchParams.get("search") || "");
   }, [searchParams]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/auth/login');
   };
 

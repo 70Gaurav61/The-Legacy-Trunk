@@ -97,11 +97,11 @@ export const AuthProvider = ({ children }) => {
 
   // Logout
   const logout = async () => {
+    setUser(null); // Clear state immediately so route guards redirect right away
     try {
-      // 🟢 UPDATED: Added "/auth" prefix
-      await api.post("/auth/logout");
-    } finally {
-      setUser(null);
+      await api.post("/auth/logout"); // Clear server-side cookie in background
+    } catch (err) {
+      // ignore — user is already logged out on the client
     }
   };
 
