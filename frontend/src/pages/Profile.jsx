@@ -102,8 +102,7 @@ export default function Profile() {
   };
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/auth/login');
+    await logout(); // setUser(null) fires immediately → FamilyRoute redirects to /auth/login
   };
 
   // Delete Logic
