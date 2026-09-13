@@ -99,7 +99,7 @@ export const AuthProvider = ({ children }) => {
 
   // Logout
   const logout = async () => {
-    // navigate("/auth/login", { replace: true });
+    navigate("/auth/login", { replace: true });
     try {
       await api.post("/auth/logout");
     } finally {
