@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom"; // 🟢 useLocation is critical here
 import { FiX, FiSearch } from "react-icons/fi";
 import { api } from "../contexts/useAuth";
 import Sidebar from "../components/Sidebar";
@@ -7,9 +7,10 @@ import StoriesRail from "../components/StoriesRail";
 import MemoriesFeed from "../components/MemoriesFeed";
 
 export default function Home() {
-  const location = useLocation();
+  const location = useLocation(); // 🟢 Listens for URL changes
   const navigate = useNavigate();
 
+  // 🟢 Helper to parse search term reliably
   const getSearchTerm = () => {
     const params = new URLSearchParams(location.search);
     return params.get("search");
@@ -56,6 +57,8 @@ export default function Home() {
       try {
         setLoading(true);
 
+        // 🟢 BUILD URL MANUALLY
+        // This ensures the backend receives the query string correctly
         const params = new URLSearchParams();
 
         if (activeUserFilter) {
@@ -84,9 +87,10 @@ export default function Home() {
 
     fetchMemories();
 
+    // 🟢 CRITICAL: 'location.search' ensures this runs when URL updates
   }, [activeUserFilter, activeFamilyId, location.search]);
 
-  // Clear Search
+  // Helper: Clear Search
   const clearSearch = () => {
     navigate('/');
   };
@@ -114,7 +118,7 @@ export default function Home() {
             <div className="p-20 text-center text-gray-400">Loading your memories...</div>
           ) : (
             <>
-              {/* SEARCH RESULTS HEADER (Only shows when searching) */}
+              {/* 🟢 SEARCH RESULTS HEADER (Only shows when searching) */}
               {searchTerm && (
                 <div className="px-8 pt-8 pb-2 flex items-center justify-between animate-fadeIn">
                   <div>
@@ -136,7 +140,7 @@ export default function Home() {
                 </div>
               )}
 
-              {/* FEED OR EMPTY STATE */}
+              {/* 🟢 FEED OR EMPTY STATE */}
               {memories.length === 0 && searchTerm ? (
                 <div className="flex flex-col items-center justify-center h-96 text-gray-400">
                   <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400">
