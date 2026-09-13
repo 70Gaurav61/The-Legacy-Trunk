@@ -29,7 +29,7 @@ export default function Header() {
 
   const handleLogout = () => {
     logout();
-    // navigate('/');
+    navigate('/auth/login');
   };
 
   const handleSearch = (e) => {
