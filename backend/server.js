@@ -26,9 +26,21 @@ app.use(helmet());
 
 app.use(cookieParser());
 // Enable CORS
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173'
+];
+
 app.use(cors({
-  origin: "https://the-legacy-trunk-psi.vercel.app/",
-  credentials: true,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Blocked by CORS policy'));
+    }
+  },
+  credentials: true
 }));
 
 // Body parsers
