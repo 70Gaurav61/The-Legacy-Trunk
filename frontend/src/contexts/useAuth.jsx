@@ -97,8 +97,8 @@ export const AuthProvider = ({ children }) => {
 
   // Logout
   const logout = async () => {
+    navigate("/auth/login", { replace: true });
     try {
-      // 🟢 UPDATED: Added "/auth" prefix
       await api.post("/auth/logout");
     } finally {
       setUser(null);

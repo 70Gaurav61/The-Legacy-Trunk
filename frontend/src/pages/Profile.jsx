@@ -13,7 +13,7 @@ import MemoriesFeed from "../components/MemoriesFeed";
 export default function Profile() {
   const navigate = useNavigate();
   const { id: routeId } = useParams();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, logout } = useAuth();
 
   // State
   const [user, setUser] = useState(null);
@@ -101,9 +101,9 @@ export default function Profile() {
     }
   };
 
-  const handleLogout = async () => {
-    await api.post("/auth/logout");
-    navigate("/login");
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
   // Delete Logic
