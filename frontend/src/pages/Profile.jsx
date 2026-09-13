@@ -103,7 +103,7 @@ export default function Profile() {
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate('/auth/login');
   };
 
   // Delete Logic
