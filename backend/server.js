@@ -27,7 +27,7 @@ app.use(helmet());
 app.use(cookieParser());
 // Enable CORS
 app.use(cors({
-  origin: "https://the-legacy-trunk-imgmklgax-gauravmahor7061-gmailcoms-projects.vercel.app/",
+  origin: "https://the-legacy-trunk-psi.vercel.app/",
   credentials: true,
 }));
 
