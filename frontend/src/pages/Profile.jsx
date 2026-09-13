@@ -102,8 +102,8 @@ export default function Profile() {
   };
 
   const handleLogout = async () => {
-    await api.post("/auth/logout");
-    navigate("/login");
+    await logout();
+    navigate('/auth/login');
   };
 
   // Delete Logic
