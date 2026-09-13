@@ -11,21 +11,15 @@ import routes from "./routes/index.js"; // Main router
 import { errorHandler } from "./middlewares/error/errorHandler.js";
 import { startCronJobs } from "./utiles/cronService.js";
 
-// Load environment variables
-// dotenv.config();
 
-// Initialize Express app
 const app = express();
 
-// Connect to MongoDB
+app.set("trust proxy", 1);
+
 connectDB();
 
-// Security headers
 app.use(helmet());
 
-
-app.use(cookieParser());
-// Enable CORS
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:5173'
@@ -43,7 +37,8 @@ app.use(cors({
   credentials: true
 }));
 
-// Body parsers
+// parsers
+app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -79,6 +74,6 @@ startCronJobs();
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`server running on http://localhost:${PORT}`);
+  // console.log(`server running on http://localhost:${PORT}`);
 
 });
