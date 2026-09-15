@@ -70,8 +70,9 @@ export default function JoinFamily() {
     e.preventDefault();
     setError("");
 
-    // Basic Validation
-    if (!personData.relationTo) return setError("Please select who you are related to in the tree.");
+    // Basic Validation — only require a connection if there are existing persons to connect to
+    if (existingPersons.length > 0 && !personData.relationTo)
+      return setError("Please select who you are related to in the tree.");
 
     try {
       setLoading(true);
@@ -188,9 +189,17 @@ export default function JoinFamily() {
           {step === 2 && (
             <form onSubmit={addPerson} className="space-y-5 animate-fadeIn">
 
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800 mb-4">
-                Found <strong>{existingPersons.length}</strong> members. To connect you, tell us how you are related to someone already in the tree.
-              </div>
+              {existingPersons.length > 0 ? (
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800 mb-4">
+                  Found <strong>{existingPersons.length}</strong> member{existingPersons.length !== 1 ? "s" : ""} in the tree. Tell us how you are related to someone already in it.
+                </div>
+              ) : (
+                <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 text-sm text-amber-800 mb-4 flex items-start gap-2">
+                  <span className="text-lg leading-none">🌱</span>
+                  <span>The family tree has no profiles yet. You'll be added as the <strong>first person</strong> — no connection needed right now.
+                  </span>
+                </div>
+              )}
 
               {/* Name & DOB Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -242,56 +251,58 @@ export default function JoinFamily() {
                 </div>
               </div>
 
-              {/* CONNECTION LOGIC */}
-              <div className="p-4 border border-indigo-100 rounded-xl bg-indigo-50/50 space-y-4">
-                <h3 className="text-sm font-bold text-indigo-900 uppercase tracking-wide">Family Connection</h3>
+              {/* CONNECTION LOGIC — only shown when there are existing persons to link to */}
+              {existingPersons.length > 0 && (
+                <div className="p-4 border border-indigo-100 rounded-xl bg-indigo-50/50 space-y-4">
+                  <h3 className="text-sm font-bold text-indigo-900 uppercase tracking-wide">Family Connection</h3>
 
-                {/* Relation To (Select Person) */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Connect me to...</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiUsers className="text-gray-400" />
+                  {/* Relation To (Select Person) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Connect me to...</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <FiUsers className="text-gray-400" />
+                      </div>
+                      <select
+                        name="relationTo"
+                        value={personData.relationTo}
+                        onChange={handlePersonChange}
+                        className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                      >
+                        <option value="">-- Select a Relative --</option>
+                        {existingPersons.map((p) => (
+                          <option key={p._id} value={p._id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                    <select
-                      name="relationTo"
-                      value={personData.relationTo}
-                      onChange={handlePersonChange}
-                      className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                    >
-                      <option value="">-- Select a Relative --</option>
-                      {existingPersons.map((p) => (
-                        <option key={p._id} value={p._id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
+                  </div>
+
+                  {/* Relation Type (Role) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">I am their...</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <FiLink className="text-gray-400" />
+                      </div>
+                      <select
+                        name="relationType"
+                        value={personData.relationType}
+                        onChange={handlePersonChange}
+                        className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                      >
+                        <option value="son">Son</option>
+                        <option value="daughter">Daughter</option>
+                        <option value="father">Father</option>
+                        <option value="mother">Mother</option>
+                        <option value="spouse">Spouse / Partner</option>
+                        <option value="sibling">Sibling</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-
-                {/* Relation Type (Role) */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">I am their...</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiLink className="text-gray-400" />
-                    </div>
-                    <select
-                      name="relationType"
-                      value={personData.relationType}
-                      onChange={handlePersonChange}
-                      className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                    >
-                      <option value="son">Son</option>
-                      <option value="daughter">Daughter</option>
-                      <option value="father">Father</option>
-                      <option value="mother">Mother</option>
-                      <option value="spouse">Spouse / Partner</option>
-                      <option value="sibling">Sibling</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
+              )}
 
               <button
                 type="submit"
