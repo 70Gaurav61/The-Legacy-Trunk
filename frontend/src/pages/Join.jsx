@@ -47,8 +47,8 @@ export default function JoinFamily() {
       // 🟢 FIX: Use 'api.post' (Base URL handled automatically)
       const res = await api.post("/families/join", { familyCode, password });
 
-      console.log("Joined family:", res.data);
-      const joinedFamilyId = res.data._id;
+      // console.log("Joined family:", res.data);
+      const joinedFamilyId = res.data.family?._id || res.data._id;
       setFamilyId(joinedFamilyId);
 
       // Fetch existing members so user can link themselves
