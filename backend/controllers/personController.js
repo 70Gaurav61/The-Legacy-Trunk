@@ -366,7 +366,7 @@ export const getPersons = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate("primaryPerson");
 
-    const familyId = req.params.familyId || req.query.familyId || req.family?._id || user.families[0];
+    const familyId = req.family?._id || req.params.familyId || req.query.familyId || user.families[0];
 
     if (!familyId) {
       return res.status(400).json({ message: "No family context found" });
