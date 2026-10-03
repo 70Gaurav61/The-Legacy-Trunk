@@ -3,10 +3,10 @@ import axios from "axios";
 
 const AuthContext = createContext();
 
-// 🟢 FIX: Base URL is now the API Root (removed "/auth")
-// This allows this instance to be used for /person, /family, AND /auth routes.
+
 export const api = axios.create({
-  baseURL: "http://localhost:5000/api/v1",
+  // baseURL: "http://localhost:5000/api/v1",
+  baseURL: import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1` : "http://localhost:5000/api/v1",
   withCredentials: true, // important for cookies
 });
 
@@ -97,11 +97,11 @@ export const AuthProvider = ({ children }) => {
 
   // Logout
   const logout = async () => {
+    setUser(null); // Clear state immediately so route guards redirect right away
     try {
-      // 🟢 UPDATED: Added "/auth" prefix
-      await api.post("/auth/logout");
-    } finally {
-      setUser(null);
+      await api.post("/auth/logout"); // Clear server-side cookie in background
+    } catch (err) {
+      // ignore — user is already logged out on the client
     }
   };
 

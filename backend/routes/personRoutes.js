@@ -21,7 +21,7 @@ router.get("/tree/descendants", verifyAuth, getDescendants);
 router.get("/tree/ancestors", verifyAuth, getAncestors);
 router.get("/tree/whole", verifyAuth, getFullTree);
 
-router.get("/", verifyAuth, getPersons);
+router.get("/", verifyAuth, isFamilyMember, getPersons);
 
 router.post("/", verifyAuth, isFamilyMember, addPerson);
 router.get("/:familyId", verifyAuth, getPersons);

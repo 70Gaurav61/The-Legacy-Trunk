@@ -14,9 +14,9 @@ const sanitizeUser = (user) => {
 const cookieOptions = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   maxAge: 7 * 24 * 60 * 60 * 1000,
-  path: "/", // 🟢 Fix: Ensure cookie is available across all /api/v1 routes
+  path: "/", // Ensure cookie is available across all /api/v1 routes
 });
 
 // Standard Register 
