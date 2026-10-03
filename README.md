@@ -55,12 +55,12 @@ Whether you're mapping out your ancestry, sharing a memory from a recent holiday
 
 ```mermaid
 flowchart TD
-    User -->|React / Vite| Frontend
-    Frontend -->|REST API / JWT Cookie| Backend
+    User -->|"React / Vite"| Frontend
+    Frontend -->|"REST API / JWT Cookie"| Backend
     Backend -->|Mongoose| MongoDB[(MongoDB)]
-    Backend -->|Custom Multer Stream| Cloudinary[Cloudinary Storage]
-    Backend -->|@google/genai| Gemini[Google Gemini AI]
-    Backend -->|node-cron| Cron[Daily Scheduled Tasks]
+    Backend -->|"Custom Multer Stream"| Cloudinary["Cloudinary Storage"]
+    Backend -->|"Google GenAI SDK"| Gemini["Google Gemini AI"]
+    Backend -->|node-cron| Cron["Daily Scheduled Tasks"]
 ```
 
 ### Application Flow
